@@ -120,6 +120,14 @@ export function AdminConsole({ email }: { email: string }) {
     setError("");
     setNotice("");
     try {
+      const signature = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+      const pngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
+      if (file.type !== "image/png" || !pngSignature.every((byte, index) => signature[index] === byte)) {
+        throw new Error("Choose a valid PNG image. Renaming a JPG or another file to .png is not enough.");
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        throw new Error("The PNG image must be 2 MB or smaller.");
+      }
       const sign = await fetch("/api/v1/admin/settings/assets", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, mimeType: file.type, sizeBytes: file.size }),

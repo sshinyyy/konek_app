@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import QRCode from "qrcode";
 import { encrypt } from "@/lib/crypto";
+import { ApiError } from "@/lib/api";
 import type { DocumentType } from "@prisma/client";
 import { downloadObject } from "@/lib/storage";
 
@@ -26,6 +27,22 @@ function wrapText(text: string, font: Awaited<ReturnType<PDFDocument["embedFont"
   return lines;
 }
 
+async function embedCertificateImage(
+  pdf: PDFDocument,
+  objectKey: string,
+  label: "seal" | "signature",
+) {
+  const bytes = await downloadObject(objectKey);
+  try {
+    return await pdf.embedPng(bytes);
+  } catch {
+    throw new ApiError(
+      409,
+      `The saved official ${label} is not a valid PNG. Upload a valid PNG image and save certificate settings again.`,
+    );
+  }
+}
+
 export async function renderCertificate(input: {
   type: DocumentType;
   referenceNo: string;
@@ -48,9 +65,11 @@ export async function renderCertificate(input: {
   const bold = await pdf.embedFont(StandardFonts.TimesRomanBold);
   const qr = await QRCode.toDataURL(input.verifyUrl, { errorCorrectionLevel: "H", margin: 1, width: 220 });
   const qrImage = await pdf.embedPng(qr);
-  const seal = input.sealObjectKey ? await pdf.embedPng(await downloadObject(input.sealObjectKey)) : null;
+  const seal = input.sealObjectKey
+    ? await embedCertificateImage(pdf, input.sealObjectKey, "seal")
+    : null;
   const signature = input.signatureObjectKey
-    ? await pdf.embedPng(await downloadObject(input.signatureObjectKey))
+    ? await embedCertificateImage(pdf, input.signatureObjectKey, "signature")
     : null;
 
   page.drawRectangle({
