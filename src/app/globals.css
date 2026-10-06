@@ -1,26 +1,154 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --ink: #20312c;
+  --muted: #78827d;
+  --line: #e6ebe6;
+  --paper: #f7f9f6;
+  --green: #145b43;
+  --green-deep: #0f4937;
+  --green-soft: #e9f2eb;
+  --gold: #c79748;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --font-sans: Arial, Helvetica, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+* { box-sizing: border-box; }
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--paper);
+  color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+}
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+::selection { background: #d7e9dc; color: #123c2e; }
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: 100vh;
+}
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 20;
+  display: flex;
+  width: 248px;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+  background: #fff;
+  padding: 25px 16px 18px;
+}
+.main-area { grid-column: 2; min-width: 0; }
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  background: rgb(255 255 255 / 92%);
+  padding: 0 36px;
+  backdrop-filter: blur(12px);
+}
+.content-wrap { width: min(1120px, 100%); margin: 0 auto; padding: 36px; }
+.nav-link {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 11px;
+  border-radius: 9px;
+  color: #68736e;
+  padding: 0 11px;
+  transition: background .15s ease, color .15s ease;
+}
+.nav-link:hover, .nav-link.active { background: #eaf2eb; color: var(--green); }
+.card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(22 54 40 / 2%);
+}
+.field {
+  width: 100%;
+  min-height: 43px;
+  border: 1px solid #dfe5df;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.field:focus { border-color: #5f9077; box-shadow: 0 0 0 3px rgb(20 91 67 / 10%); }
+.field::placeholder { color: #a1aaa5; }
+.button-primary {
+  display: inline-flex;
+  min-height: 41px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  background: var(--green);
+  color: #fff;
+  padding: 0 15px;
+  font-weight: 600;
+  transition: background .15s ease, transform .15s ease;
+}
+.button-primary:hover { background: var(--green-deep); }
+.button-primary:active { transform: translateY(1px); }
+.button-secondary {
+  display: inline-flex;
+  min-height: 39px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #4e5e56;
+  padding: 0 13px;
+  font-weight: 600;
+  transition: border-color .15s ease, background .15s ease;
+}
+.button-secondary:hover { border-color: #b7c7ba; background: #fbfcfa; }
+.eyebrow {
+  color: #7c8780;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 850px) {
+  .app-shell { display: block; padding-bottom: 66px; }
+  .sidebar {
+    inset: auto 0 0;
+    width: 100%;
+    height: 64px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    border-top: 1px solid var(--line);
+    border-right: 0;
+    padding: 5px 8px;
+  }
+  .sidebar-brand, .sidebar-footer, .sidebar-label { display: none; }
+  .sidebar nav { display: flex; width: 100%; justify-content: space-around; gap: 3px; }
+  .nav-link { min-width: 58px; min-height: 48px; flex-direction: column; justify-content: center; gap: 4px; padding: 3px; font-size: 10px; }
+  .main-area { padding-bottom: 12px; }
+  .topbar { height: 58px; padding: 0 17px; }
+  .content-wrap { padding: 25px 18px; }
+}
+@media (max-width: 480px) {
+  .content-wrap { padding: 22px 14px; }
 }

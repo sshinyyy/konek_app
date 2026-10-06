@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  RESIDENT
+  STAFF
+  ADMIN
+}
+
+enum RequestStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  ISSUED
+}
+
+enum DocumentType {
+  BARANGAY_CLEARANCE
+  CERTIFICATE_OF_RESIDENCY
+  BARANGAY_ID
+}
+
+enum UploadStatus {
+  PENDING
+  COMPLETE
+}
+
+model User {
+  id           String           @id @default(uuid()) @db.Uuid
+  email        String           @unique @db.VarChar(320)
+  passwordHash String
+  role         UserRole         @default(RESIDENT)
+  isActive     Boolean          @default(true)
+  privacyNoticeAcceptedAt DateTime?
+  privacyNoticeVersion    String? @db.VarChar(40)
+  profile      ResidentProfile?
+  staffProfile StaffProfile?
+  requests     DocumentRequest[]
+  auditEvents  AuditLog[]       @relation("AuditActor")
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([role, isActive])
+}
+
+model ResidentProfile {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String   @unique @db.Uuid
+  fullNameEncrypted  String
+  dateOfBirthEncrypted String
+  addressEncrypted   String
+  phoneEncrypted     String
+  civilStatusEncrypted String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model StaffProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @db.Uuid
+  fullNameEncrypted String
+  jobTitle          String   @db.VarChar(150)
+  phoneEncrypted    String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model DocumentRequest {
+  id             String        @id @default(uuid()) @db.Uuid
+  referenceNo    String        @unique @db.VarChar(32)
+  residentId     String        @db.Uuid
+  type           DocumentType
+  status         RequestStatus @default(PENDING)
+  purpose        String        @db.VarChar(500)
+  remarks        String?       @db.VarChar(1000)
+  decidedById    String?       @db.Uuid
+  submittedAt    DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  resident       User          @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  uploads        SupportingDocument[]
+  document       IssuedDocument?
+
+  @@index([residentId, submittedAt])
+  @@index([status, submittedAt])
+}
+
+model SupportingDocument {
+  id        String       @id @default(uuid()) @db.Uuid
+  requestId String       @db.Uuid
+  objectKey String       @unique
+  fileName  String       @db.VarChar(255)
+  mimeType  String       @db.VarChar(100)
+  sizeBytes Int
+  status    UploadStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  request   DocumentRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, status])
+}
+
+model IssuedDocument {
+  id               String        @id @default(uuid()) @db.Uuid
+  requestId        String        @unique @db.Uuid
+  referenceNo      String        @unique @db.VarChar(32)
+  type             DocumentType
+  recipientNameEncrypted String
+  issuedAt         DateTime      @default(now())
+  validUntil       DateTime?
+  revokedAt        DateTime?
+  verificationHash String        @unique @db.Char(64)
+  pdfObjectKey     String
+  request          DocumentRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  verificationLogs QRVerificationLog[]
+
+  @@index([referenceNo])
+  @@index([validUntil, revokedAt])
+}
+
+model QRVerificationLog {
+  id            String         @id @default(uuid()) @db.Uuid
+  documentId    String?        @db.Uuid
+  tokenHash     String         @db.Char(64)
+  isAuthentic   Boolean
+  userAgent     String?        @db.VarChar(500)
+  ipHash        String?        @db.Char(64)
+  verifiedAt    DateTime       @default(now())
+  document      IssuedDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([documentId, verifiedAt])
+  @@index([tokenHash, verifiedAt])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String?  @db.Uuid
+  action    String   @db.VarChar(100)
+  entity    String   @db.VarChar(100)
+  entityId  String?  @db.Uuid
+  createdAt DateTime @default(now())
+  actor     User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([entity, entityId, createdAt])
+}
+
+model BarangaySettings {
+  id                   Int      @id @default(1)
+  name                 String   @default("Barangay San Isidro")
+  municipality         String   @default("Municipality")
+  province             String   @default("Province")
+  captainName          String?
+  officeAddress        String?
+  contactNumber        String?
+  certificateValidityDays Int   @default(365)
+  sealObjectKey           String?
+  signatureObjectKey      String?
+  updatedAt            DateTime @updatedAt
+}
