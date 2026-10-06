@@ -36,7 +36,6 @@ export async function createUploadUrl(key: string, contentType: string, sizeByte
     Key: key,
     ContentType: contentType,
     ContentLength: sizeBytes,
-    ServerSideEncryption: "AES256",
   });
   return getSignedUrl(getClient(), command, { expiresIn: 300 });
 }
@@ -48,7 +47,6 @@ export async function uploadPdf(key: string, content: Uint8Array): Promise<void>
       Key: key,
       Body: content,
       ContentType: "application/pdf",
-      ServerSideEncryption: "AES256",
     }),
   );
 }
