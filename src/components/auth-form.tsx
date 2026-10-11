@@ -64,41 +64,13 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
   }
 
   return (
-    <div className="grid min-h-screen bg-white lg:grid-cols-[1.04fr_.96fr]">
-      <section className="relative hidden flex-col justify-between overflow-hidden bg-[#123f31] p-12 text-white lg:flex xl:p-16">
-        <div className="absolute -right-24 -top-32 h-[420px] w-[420px] rounded-full border border-white/10" />
-        <div className="absolute -right-6 -top-14 h-[280px] w-[280px] rounded-full border border-white/10" />
-        <Link className="relative flex items-center gap-3" href="/login">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-lg font-semibold">k.</span>
-          <span className="text-[15px] font-semibold">konek<span className="font-normal text-white/75">barangay</span></span>
+    <main className="auth-page">
+      <section className="auth-panel">
+        <Link className="mb-7 flex items-center gap-2.5" href="/login">
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-[#145b43] text-sm font-semibold text-white">k.</span>
+          <span className="text-[14px] font-semibold text-[#253a30]">konek<span className="font-normal">barangay</span></span>
         </Link>
-        <div className="relative max-w-[490px]">
-          <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] text-white/80">
-            <ShieldCheck size={14} /> Public service, made simpler
-          </div>
-          <h1 className="text-[42px] font-semibold leading-[1.14] tracking-[-.04em] xl:text-[50px]">
-            Your barangay,<br />within reach.
-          </h1>
-          <p className="mt-5 max-w-[390px] text-[15px] leading-7 text-white/70">
-            Request essential documents, keep track of every step, and verify official certificates securely.
-          </p>
-          <div className="mt-10 flex items-center gap-4 border-t border-white/15 pt-6">
-            <span className="flex -space-x-2">
-              {["R", "M", "J"].map((letter, index) => (
-                <span className={`flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#123f31] text-[11px] font-bold text-[#183e31] ${index === 0 ? "bg-[#d9e7cd]" : index === 1 ? "bg-[#ebd8b5]" : "bg-[#d2dfeb]"}`} key={letter}>{letter}</span>
-              ))}
-            </span>
-            <span className="text-[11px] text-white/65">A more connected community starts here.</span>
-          </div>
-        </div>
-        <p className="relative text-[10px] tracking-wide text-white/45">BARANGAY SAN ISIDRO · COMMUNITY SERVICES</p>
-      </section>
-      <section className="flex min-h-screen flex-col items-center justify-center px-6 py-10 sm:px-12">
-        <div className="w-full max-w-[390px]">
-          <Link className="mb-8 flex items-center gap-2 text-[12px] text-[#7a857e] hover:text-[#145b43] lg:hidden" href="/">
-            <span className="font-bold text-[#145b43]">k.</span> konekbarangay
-          </Link>
-          <div className="mb-8">
+        <div className="mb-6">
             <p className="eyebrow">{isRegister ? `Create your account · Step ${step} of 2` : "Welcome back"}</p>
             <h2 className="mt-2 text-[29px] font-semibold tracking-[-.035em] text-[#23362d]">
               {isRegister ? (step === 1 ? "Let’s get you set up." : "A little about you.") : "Sign in to continue."}
@@ -106,8 +78,8 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
             <p className="mt-2 text-[13px] leading-6 text-[#818b85]">
               {isRegister ? "Access secure, convenient barangay services online." : "Manage your requests and documents in one place."}
             </p>
-          </div>
-          <form className="space-y-4" onSubmit={submit}>
+        </div>
+        <form className="space-y-4" onSubmit={submit}>
             {isRegister && step === 2 && (
               <>
                 <label className={labelClass}>Full name<input autoComplete="name" className={`${inputClass} mt-1.5`} onChange={(event) => update("fullName", event.target.value)} placeholder="As shown on your ID" required value={form.fullName} /></label>
@@ -146,17 +118,16 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
             {isRegister && step === 2 && (
               <button className="button-secondary w-full" onClick={() => setStep(1)} type="button"><ArrowLeft size={14} /> Back to account details</button>
             )}
-          </form>
-          <p className="mt-6 text-center text-[12px] text-[#7b867f]">
+        </form>
+        <p className="mt-6 text-center text-[12px] text-[#7b867f]">
             {isRegister ? "Already registered?" : "New to the resident portal?"}{" "}
             <Link className="font-semibold text-[#145b43] hover:underline" href={isRegister ? "/login" : "/register"}>
               {isRegister ? "Sign in" : "Create an account"}
             </Link>
-          </p>
-          <p className="mt-9 flex items-center justify-center gap-1.5 text-[10px] text-[#9aa39d]"><ShieldCheck size={13} /> Your personal information is protected and encrypted.</p>
-        </div>
+        </p>
+        <p className="mt-7 flex items-center justify-center gap-1.5 text-[10px] text-[#9aa39d]"><ShieldCheck size={13} /> Your personal information is protected and encrypted.</p>
       </section>
-    </div>
+    </main>
   );
 }
 

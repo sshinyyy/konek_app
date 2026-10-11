@@ -56,8 +56,8 @@ export function AppShell({ role, email, fullName, children }: Props) {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <Link className="sidebar-brand mb-8 flex items-center gap-3 px-2" href="/">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#145b43] text-white">
+        <Link className="sidebar-brand mb-7 flex items-center gap-3 px-2" href="/">
+          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#145b43] text-white">
             <span className="text-[19px] font-semibold">k.</span>
           </span>
           <span>
@@ -65,7 +65,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
             <span className="mt-0.5 block text-[10px] tracking-[.13em] text-[#88928c]">COMMUNITY SERVICES</span>
           </span>
         </Link>
-        <p className="sidebar-label mb-2 px-3 text-[10px] font-bold tracking-[.13em] text-[#a0aaa3]">WORKSPACE</p>
+        <p className="sidebar-label mb-2 px-3 text-[9px] font-bold tracking-[.12em] text-[#929d95]">WORKSPACE</p>
         <nav className="flex flex-col gap-1">
           {nav.map(({ href, label, icon: Icon }) => {
             const active = !href.includes("#") && pathname === href;
@@ -79,7 +79,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
         </nav>
         <div className="sidebar-footer mt-auto border-t border-[#edf0ed] pt-4">
           <div className="mb-4 flex items-center gap-3 px-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#eff3ed] text-[12px] font-bold text-[#486658]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#eff3ed] text-[11px] font-bold text-[#486658]">
               {fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}
             </span>
             <span className="min-w-0">

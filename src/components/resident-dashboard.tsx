@@ -157,12 +157,9 @@ export function ResidentDashboard({ fullName, today }: { fullName: string; today
         ))}
       </div>
 
-      <div className="mt-7 rounded-xl bg-[#164c38] p-5 text-white sm:flex sm:items-center sm:justify-between sm:px-7 sm:py-6">
-        <div className="flex items-start gap-4">
-          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-white/10 text-[#cde4d2]"><ShieldCheck size={20} /></span>
-          <div><p className="text-[15px] font-semibold">Official documents. Verified in a scan.</p><p className="mt-1 max-w-[430px] text-[12px] leading-5 text-white/65">Every issued certificate includes a unique QR code for secure, instant authenticity checks.</p></div>
-        </div>
-        <a className="mt-4 inline-flex items-center gap-2 text-[12px] font-semibold text-[#d6eadc] hover:text-white sm:mt-0" href="/verify">Explore verification <ArrowUpRight size={14} /></a>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-y border-[#e3e9e4] py-3">
+        <p className="flex items-center gap-2 text-[12px] text-[#64746a]"><ShieldCheck size={15} className="text-[#477661]" /> Issued documents include a QR code for authenticity checks.</p>
+        <a className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#175b43] hover:underline" href="/verify">Verify a document <ArrowUpRight size={14} /></a>
       </div>
 
       {showForm && (
