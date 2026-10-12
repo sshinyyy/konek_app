@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Activity, BadgeCheck, Files, LayoutDashboard, LogOut, Settings2, ShieldCheck, UserRound, Users } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Activity, BadgeCheck, Files, LayoutDashboard, LogOut, Menu, Settings2, ShieldCheck, UserRound, Users, X } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type Props = {
   role: "RESIDENT" | "STAFF" | "ADMIN";
@@ -16,6 +16,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [signOutError, setSignOutError] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const nav = role === "RESIDENT"
     ? [
         { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -51,6 +52,15 @@ export function AppShell({ role, email, fullName, children }: Props) {
     : role === "STAFF" ? "Staff workspace"
       : "Resident portal";
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileMenuOpen]);
+
   async function signOut() {
     setSignOutError("");
     try {
@@ -65,7 +75,8 @@ export function AppShell({ role, email, fullName, children }: Props) {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      {mobileMenuOpen && <button aria-label="Close navigation menu" className="mobile-nav-backdrop" onClick={() => setMobileMenuOpen(false)} type="button" />}
+      <aside aria-label="Workspace navigation" className={`sidebar ${mobileMenuOpen ? "mobile-open" : ""}`} id="workspace-navigation">
         <Link className="sidebar-brand mb-7 flex items-center gap-3 px-2" href="/">
           <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#145b43] text-white">
             <span className="text-[19px] font-semibold">k.</span>
@@ -75,12 +86,15 @@ export function AppShell({ role, email, fullName, children }: Props) {
             <span className="mt-0.5 block text-[10px] tracking-[.13em] text-[#88928c]">COMMUNITY SERVICES</span>
           </span>
         </Link>
+        <button aria-label="Close navigation menu" className="mobile-sidebar-close" onClick={() => setMobileMenuOpen(false)} type="button">
+          <X size={18} />
+        </button>
         <p className="sidebar-label mb-2 px-3 text-[9px] font-bold tracking-[.12em] text-[#929d95]">WORKSPACE</p>
-        <nav className="flex flex-col gap-1">
+        <nav aria-label="Pages" className="flex flex-col gap-1">
           {nav.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return (
-              <Link aria-current={active ? "page" : undefined} className={`nav-link ${active ? "active" : ""}`} href={href} key={href}>
+              <Link aria-current={active ? "page" : undefined} className={`nav-link ${active ? "active" : ""}`} href={href} key={href} onClick={() => setMobileMenuOpen(false)}>
                 <Icon size={17} strokeWidth={1.8} />
                 <span>{label}</span>
               </Link>
@@ -104,13 +118,22 @@ export function AppShell({ role, email, fullName, children }: Props) {
       </aside>
       <div className="main-area">
         <header className="topbar">
-          <div className="min-w-0">
+          <div className="topbar-heading min-w-0">
+            <button
+              aria-controls="workspace-navigation"
+              aria-expanded={mobileMenuOpen}
+              aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+              className="mobile-menu-toggle"
+              onClick={() => setMobileMenuOpen((isOpen) => !isOpen)}
+              type="button"
+            >
+              {mobileMenuOpen ? <X size={19} /> : <Menu size={19} />}
+            </button>
             <p className="hidden text-[10px] font-semibold uppercase tracking-[.13em] text-[#8b978f] sm:block">{section}</p>
             <p className="truncate text-[13px] font-semibold text-[#35473c]">{pageTitle}</p>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden items-center gap-2 text-[11px] font-medium text-[#64756b] sm:flex"><span className="h-2 w-2 rounded-full bg-[#59a77a]" /> Secure services</span>
-            <button aria-label="Sign out" className="button-secondary min-h-[34px] px-2.5 text-[10px] md:hidden" onClick={signOut} type="button"><LogOut size={14} /></button>
           </div>
         </header>
         {signOutError && <p aria-live="polite" className="mx-5 mt-3 rounded-md bg-[#fff5f2] px-3 py-2 text-[11px] text-[#a14d3d]">{signOutError}</p>}
