@@ -8,12 +8,11 @@ Resident profiling, online document requests, staff processing, certificate gene
 - PostgreSQL 14+ (Supabase is supported)
 - A private S3-compatible bucket with provider-managed encryption enabled
 - Upstash Redis REST credentials for distributed production rate limiting
-- A private HTTPS malware-scanning service implementing the documented request/response contract
 - HTTPS public URL for production certificate verification
 
 ## Configure and run locally
 
-1. Copy `.env.example` to `.env` and configure both PostgreSQL URLs, the independent session, encryption, and IP-hashing secrets, the public app URL, S3 credentials, Upstash credentials, and a private file-scanner endpoint and token. Generate a 32-byte AES key with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"` and a session secret with `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"`. Keep secrets and recoverable encryption-key backups in a managed secret store; never paste their values into source control or support messages.
+1. Copy `.env.example` to `.env` and configure both PostgreSQL URLs, the independent session, encryption, and IP-hashing secrets, the public app URL, S3 credentials, and Upstash credentials. Generate a 32-byte AES key with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"` and a session secret with `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"`. Keep secrets and recoverable encryption-key backups in a managed secret store; never paste their values into source control or support messages.
 2. Using a trusted database administrator connection, create the non-owner runtime role and set its password without placing the password in source control:
 
    ```sql
@@ -51,10 +50,10 @@ New installations default to Barangay Banonong, Dapitan City, Zamboanga del Nort
 - Sessions are short-lived signed HTTP-only, `SameSite=Strict` cookies. Roles are assigned server-side; public registration can only create resident accounts. Staff and administrators are provisioned by administrators or the one-time seed.
 - Every protected server request rechecks that the account is active and that its stored role still matches the session, so disabling an account or changing its role invalidates the old session on its next server request. The Next.js Proxy performs only an optimistic token check; authorization is enforced again by server pages and API handlers.
 - Mutating routes validate payloads, check same-origin requests, and enforce ownership/role checks. Private S3 objects use short-lived presigned URLs; uploads are size/type constrained and marked complete only after checking the stored object.
-- Uploads are written first to the private `quarantine/` prefix, checked against actual file signatures and size/type metadata, and sent to the configured malware scanner. Only scanner-approved bytes are written to the clean `requirements/` prefix and marked `CLEAN`; staff download routes deny pending or rejected files. Configure a private-bucket lifecycle rule to remove abandoned objects in `quarantine/`.
+- Supporting uploads are written first to the private `quarantine/` prefix and checked against actual file signatures and size/type metadata before they are copied to `requirements/`. Malware scanning is not implemented: uploads are unscanned, are marked `COMPLETE` rather than `CLEAN`, and the staff interface warns reviewers before opening them. File signature checks are not a substitute for malware detection; staff should open files only when they trust the resident and file. Staff download routes deny pending or rejected files. Configure a private-bucket lifecycle rule to remove abandoned objects in `quarantine/`.
 - Login, registration, public QR verification, and upload URL creation use atomic fixed-window rate limits stored in Upstash Redis. Default limits are 10 login attempts/minute, 5 registrations/hour, 30 verifications/minute, and 10 upload URLs/hour. Each limit and window can be overridden with the matching `RATE_LIMIT_<NAME>_MAX` and `RATE_LIMIT_<NAME>_WINDOW_SECONDS` environment variables. Production requests fail closed with a 503 if Redis protection is unavailable or unconfigured.
 - Issued PDFs are rendered server-side, stored in the private storage bucket, and embed a QR link containing a random bearer verification token. Only the token hash is stored in PostgreSQL. The token is not described as encrypted or digitally signed. Invalid, expired, revoked, and successful verification scans are recorded with a salted IP hash and bounded user-agent.
-- The app adds HTTPS HSTS in production, no-referrer, frame and MIME protections, and disables caching for API responses. Configure private-bucket lifecycle/retention, backups, alerting, scanner availability, and provider agreements. These controls do not themselves establish legal compliance.
+- The app adds HTTPS HSTS in production, no-referrer, frame and MIME protections, and disables caching for API responses. Configure private-bucket lifecycle/retention, backups, alerting, and provider agreements. These controls do not themselves establish legal compliance.
 - These technical controls support a privacy-conscious RA 10173 implementation; they do **not** by themselves establish legal compliance. Before production use, the barangay must complete its privacy impact assessment, lawful-basis and notice review, retention/deletion schedule, processor agreements, data-subject request process, and breach-response procedures with its Data Protection Officer.
 
 ## Included routes
@@ -93,8 +92,8 @@ Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` locally
 Use a dedicated preview deployment with isolated database/storage resources, synthetic resident details, and a test staff account:
 
 1. Register a test resident, sign in, and confirm the resident profile loads and can be updated.
-2. Submit a request using synthetic information and a harmless test PDF/image. Confirm it remains private in quarantine until file signature and malware scanning succeed.
-3. Confirm the clean upload becomes available to authorized staff only after passing the scanner. Confirm invalid, mismatched, oversized, and scanner-rejected files are blocked.
+2. Submit a request using synthetic information and a harmless test PDF/image. Confirm it remains private in quarantine until file signature and size/type checks succeed.
+3. Confirm the upload is marked as not malware-scanned and is available only to authorized staff after validation. Confirm invalid, mismatched, and oversized files are blocked.
 4. Sign in as test staff; review the request. Test rejection with remarks, then use a separate request to issue a document.
 5. Download the request receipt and issued PDF; confirm both use the saved Banonong settings and the issued document contains a QR verification link.
 6. Verify the QR token and check that only intended public details are returned. Repeat with an invalid token and confirm the invalid result is logged without disclosing resident profile data.
@@ -104,6 +103,6 @@ Use a dedicated preview deployment with isolated database/storage resources, syn
 
 ### Authorized production readiness checks
 
-Before production use, a designated administrator must verify the Vercel Production environment variables, database role/RLS behavior, encryption-key backup and restore plan, Upstash limits, private scanner availability, private-bucket lifecycle and access policies, and Banonong certificate settings. An authorized operator should perform a limited smoke test only with approved synthetic/test accounts and a documented cleanup plan. Do not issue a real certificate or use actual resident information as a deployment test.
+Before production use, a designated administrator must verify the Vercel Production environment variables, database role/RLS behavior, encryption-key backup and restore plan, Upstash limits, private-bucket lifecycle and access policies, and Banonong certificate settings. Supporting files are not malware-scanned; administrators must decide whether this residual risk is acceptable before enabling real resident document processing. An authorized operator should perform a limited smoke test only with approved synthetic/test accounts and a documented cleanup plan. Do not issue a real certificate or use actual resident information as a deployment test.
 
 The Barangay Data Protection Officer must finalize the privacy notice and determine applicable lawful bases, retention/deletion schedule, provider agreements, data-subject request procedures, backup/recovery, access-review, and breach-response processes before real resident data is processed. This software does not certify compliance with RA 10173.

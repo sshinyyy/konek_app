@@ -1,8 +1,8 @@
 import { ApiError, errorResponse } from "@/lib/api";
 import { getSession, isStaff } from "@/lib/auth";
-import { scanStoredUpload } from "@/lib/file-safety";
+import { validateStoredUpload } from "@/lib/file-safety";
 import { withRlsContext } from "@/lib/rls";
-import { createDownloadUrl, deleteObject, uploadObject } from "@/lib/storage";
+import { createDownloadUrl, deleteObject } from "@/lib/storage";
 import { canAccessSupportingDocument } from "@/lib/upload-access";
 
 export async function GET(
@@ -33,45 +33,24 @@ export async function GET(
       return found;
     });
 
-    if (file.status === "COMPLETE") {
-      let scanned;
-      try {
-        scanned = await scanStoredUpload(file.objectKey, file.mimeType, file.sizeBytes);
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 422) {
-          await withRlsContext(session, (tx) =>
-            tx.supportingDocument.update({ where: { id }, data: { status: "REJECTED" } }),
-          );
-          try {
-            await deleteObject(file.objectKey);
-          } catch (cleanupError) {
-            console.error("Could not remove an unsafe legacy supporting upload", {
-              uploadId: id,
-              cleanupError,
-            });
-          }
-        }
-        throw error;
-      }
-      if (!scanned.clean) {
+    try {
+      await validateStoredUpload(file.objectKey, file.mimeType, file.sizeBytes);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 422) {
         await withRlsContext(session, (tx) =>
           tx.supportingDocument.update({ where: { id }, data: { status: "REJECTED" } }),
         );
         try {
           await deleteObject(file.objectKey);
         } catch (cleanupError) {
-          console.error("Could not remove a malware-positive legacy supporting upload", {
+          console.error("Could not remove an invalid supporting upload", {
             uploadId: id,
             cleanupError,
           });
-          throw new ApiError(503, "The unsafe file was blocked, but storage cleanup is pending.");
+          throw new ApiError(503, "The invalid file was blocked, but storage cleanup is pending.");
         }
-        throw new ApiError(422, "The uploaded file did not pass the malware scan.");
       }
-      await uploadObject(file.objectKey, scanned.bytes, file.mimeType);
-      await withRlsContext(session, (tx) =>
-        tx.supportingDocument.update({ where: { id }, data: { status: "CLEAN" } }),
-      );
+      throw error;
     }
 
     return Response.redirect(await createDownloadUrl(file.objectKey), 302);

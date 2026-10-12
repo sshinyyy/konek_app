@@ -187,6 +187,7 @@ export function ResidentDashboard({ fullName, today }: { fullName: string; today
                 <span className="flex-1 text-[12px]">{files.length ? files.map((file) => file.name).join(", ") : "Choose files to attach"}</span>
                 <input accept=".pdf,.jpg,.jpeg,.png,.webp" className="sr-only" multiple onChange={(event) => setFiles(Array.from(event.target.files ?? []))} type="file" />
               </span>
+              <span className="mt-2 block rounded-md border border-[#f0dfbd] bg-[#fff9ec] px-3 py-2 text-[10px] font-normal leading-4 text-[#896838]">Uploaded files are checked for type and size but are not malware-scanned. Only upload files you trust.</span>
             </label>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf0ed] pt-4">
               <p className="max-w-[510px] text-[11px] leading-5 text-[#8a958e]">By submitting, you confirm that the information is accurate and consent to its use for processing this request.</p>

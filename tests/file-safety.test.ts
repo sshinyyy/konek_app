@@ -3,7 +3,7 @@ import { MAX_SUPPORTING_FILE_BYTES } from "@/lib/file-safety";
 import {
   fileExtensionForMime,
   hasExpectedFileSignature,
-  scanStoredUpload,
+  validateStoredUpload,
 } from "@/lib/file-safety";
 import { downloadObject, getObjectMetadata } from "@/lib/storage";
 
@@ -40,63 +40,47 @@ describe("uploaded file signature validation", () => {
   });
 });
 
-describe("private scanner integration", () => {
+describe("stored upload validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("FILE_SCAN_URL", "https://scanner.example.test/scan");
-    vi.stubEnv("FILE_SCAN_TOKEN", "test-token");
-    vi.stubEnv("NODE_ENV", "test");
     vi.mocked(getObjectMetadata).mockResolvedValue({
       contentLength: pdfHeader.byteLength,
       contentType: "application/pdf",
     });
     vi.mocked(downloadObject).mockResolvedValue(pdfHeader);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ clean: true }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      ),
-    );
   });
 
-  it("sends correctly validated bytes to the scanner", async () => {
-    const result = await scanStoredUpload("quarantine/test.pdf", "application/pdf", pdfHeader.length);
-    expect(result.clean).toBe(true);
-    expect(result.bytes).toEqual(pdfHeader);
-    expect(fetch).toHaveBeenCalledWith(
-      new URL("https://scanner.example.test/scan"),
-      expect.objectContaining({ method: "POST", body: expect.any(Buffer) }),
-    );
+  it("returns bytes after checking stored metadata, size, and signature", async () => {
+    const result = await validateStoredUpload("quarantine/test.pdf", "application/pdf", pdfHeader.length);
+    expect(result).toEqual(pdfHeader);
+    expect(getObjectMetadata).toHaveBeenCalledWith("quarantine/test.pdf");
+    expect(downloadObject).toHaveBeenCalledWith("quarantine/test.pdf");
   });
 
-  it("rejects mismatched metadata before contacting the scanner", async () => {
+  it("rejects mismatched metadata before downloading the file", async () => {
     vi.mocked(getObjectMetadata).mockResolvedValue({
       contentLength: pdfHeader.length + 1,
       contentType: "application/pdf",
     });
     await expect(
-      scanStoredUpload("quarantine/test.pdf", "application/pdf", pdfHeader.length),
+      validateStoredUpload("quarantine/test.pdf", "application/pdf", pdfHeader.length),
     ).rejects.toMatchObject({ status: 422 });
-    expect(fetch).not.toHaveBeenCalled();
+    expect(downloadObject).not.toHaveBeenCalled();
   });
 
-  it("rejects files larger than the server limit before downloading or scanning", async () => {
+  it("rejects files larger than the server limit before downloading", async () => {
     vi.mocked(getObjectMetadata).mockResolvedValue({
       contentLength: MAX_SUPPORTING_FILE_BYTES + 1,
       contentType: "application/pdf",
     });
     await expect(
-      scanStoredUpload(
+      validateStoredUpload(
         "quarantine/oversized.pdf",
         "application/pdf",
         MAX_SUPPORTING_FILE_BYTES + 1,
       ),
     ).rejects.toMatchObject({ status: 422 });
     expect(downloadObject).not.toHaveBeenCalled();
-    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("rejects a file whose declared type does not match its bytes", async () => {
@@ -106,29 +90,17 @@ describe("private scanner integration", () => {
       contentType: "image/png",
     });
     await expect(
-      scanStoredUpload("quarantine/test.png", "image/png", pdfHeader.length),
+      validateStoredUpload("quarantine/test.png", "image/png", pdfHeader.length),
     ).rejects.toMatchObject({ status: 422 });
-    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("fails closed if no malware scanner is configured", async () => {
-    vi.stubEnv("FILE_SCAN_URL", "");
+  it("rejects a file whose actual bytes do not match its declared type", async () => {
+    vi.mocked(getObjectMetadata).mockResolvedValue({
+      contentLength: pdfHeader.length,
+      contentType: "image/png",
+    });
     await expect(
-      scanStoredUpload("quarantine/test.pdf", "application/pdf", pdfHeader.length),
-    ).rejects.toMatchObject({ status: 503 });
-  });
-
-  it("returns scanner detections without treating the file as clean", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ clean: false }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      ),
-    );
-    const result = await scanStoredUpload("quarantine/test.pdf", "application/pdf", pdfHeader.length);
-    expect(result.clean).toBe(false);
+      validateStoredUpload("quarantine/test.png", "image/png", pdfHeader.length),
+    ).rejects.toMatchObject({ status: 422 });
   });
 });

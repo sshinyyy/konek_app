@@ -198,7 +198,13 @@ export function StaffDashboard({
                 <div><p className="text-[9px] uppercase tracking-wide text-[#9aa49d]">Contact</p><p className="mt-1 text-[10px] text-[#57665c]">{selected.resident?.phone ?? "—"}</p><p className="mt-1 text-[9px] text-[#9aa49d]">DOB · {selected.resident?.dateOfBirth ?? "—"}</p></div>
               </div>
               <div className="rounded-lg bg-[#f7f9f6] p-3"><p className="text-[9px] font-bold uppercase tracking-wide text-[#9aa49d]">Stated purpose</p><p className="mt-1.5 text-[11px] leading-5 text-[#506056]">{selected.purpose}</p></div>
-              <div><p className="mb-2 text-[10px] font-semibold text-[#68756d]">Supporting requirements</p>{selected.uploads.length === 0 ? <p className="text-[10px] text-[#9aa49d]">No files attached.</p> : <div className="space-y-1.5">{selected.uploads.map((file) => <a className="flex items-center justify-between rounded-md border border-[#edf0ed] px-2.5 py-2 text-[10px] text-[#58675d] hover:bg-[#f8faf7]" href={`/api/v1/uploads/${file.id}/download`} key={file.id}><span className="truncate">{file.fileName}</span><ArrowDownToLine className="ml-2 shrink-0 text-[#789181]" size={13} /></a>)}</div>}</div>
+              <div>
+                <p className="mb-2 text-[10px] font-semibold text-[#68756d]">Supporting requirements</p>
+                {selected.uploads.length === 0 ? <p className="text-[10px] text-[#9aa49d]">No files attached.</p> : <>
+                  <p className="mb-2 rounded-md border border-[#f0dfbd] bg-[#fff9ec] px-2.5 py-2 text-[9px] leading-4 text-[#896838]">Files are not malware-scanned. Open only if you trust the resident and file.</p>
+                  <div className="space-y-1.5">{selected.uploads.map((file) => <a className="flex items-center justify-between rounded-md border border-[#edf0ed] px-2.5 py-2 text-[10px] text-[#58675d] hover:bg-[#f8faf7]" href={`/api/v1/uploads/${file.id}/download`} key={file.id}><span className="min-w-0 truncate">{file.fileName}{file.status === "COMPLETE" && <span className="ml-2 rounded bg-[#fff1d9] px-1 py-0.5 text-[8px] font-semibold text-[#896838]">NOT SCANNED</span>}</span><ArrowDownToLine className="ml-2 shrink-0 text-[#789181]" size={13} /></a>)}</div>
+                </>}
+              </div>
               {selected.remarks && <div className="rounded-lg bg-[#fff8ed] p-3 text-[10px] text-[#896838]">Staff remarks: {selected.remarks}</div>}
               {["PENDING", "IN_REVIEW"].includes(selected.status) && <>
                 <label className="block text-[10px] font-semibold text-[#68756d]">Review note <span className="font-normal text-[#9aa49d]">(required if declining)</span><textarea className="field mt-1.5 min-h-[66px] resize-y text-[11px]" onChange={(event) => setRemarks(event.target.value)} placeholder="Add a note for the resident…" value={remarks} /></label>
