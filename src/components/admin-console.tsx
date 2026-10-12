@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Activity, Check, CircleAlert, FileCog, LoaderCircle, LockKeyhole, Plus, RefreshCw, ShieldCheck, UserCheck, UserRoundX, Users } from "lucide-react";
 
 type Staff = { id: string; email: string; isActive: boolean; createdAt: string };
@@ -18,6 +18,36 @@ type Settings = {
 };
 type Audit = { id: string; action: string; entity: string; createdAt: string; actor: { email: string } | null };
 type Verification = { id: string; isAuthentic: boolean; tokenHash: string; verifiedAt: string };
+type AdminSection = "overview" | "staff" | "settings" | "activity";
+type AdminData = { staff?: Staff[]; settings?: Settings; audit?: Audit[]; verifications?: Verification[] };
+
+async function fetchAdminData(section: AdminSection, signal?: AbortSignal): Promise<AdminData> {
+  const endpoints = section === "overview"
+    ? ["staff", "settings", "audit"] as const
+    : section === "staff" ? ["staff"] as const
+      : section === "settings" ? ["settings"] as const
+        : ["audit"] as const;
+  const responses = await Promise.all(endpoints.map((endpoint) =>
+    fetch(`/api/v1/admin/${endpoint}`, { cache: "no-store", signal }),
+  ));
+  const results = await Promise.all(responses.map(async (response) => {
+    if (!response.ok) throw new Error("The administration data could not be loaded.");
+    return response.json();
+  }));
+  const data: AdminData = {};
+  for (const [index, endpoint] of endpoints.entries()) {
+    const result = results[index];
+    if (endpoint === "staff") {
+      data.staff = result.staff;
+    } else if (endpoint === "settings") {
+      data.settings = result;
+    } else {
+      data.audit = result.audit;
+      data.verifications = result.verifications;
+    }
+  }
+  return data;
+}
 
 const emptySettings: Settings = {
   name: "", municipality: "", province: "", captainName: "", officeAddress: "", contactNumber: "",
@@ -43,47 +73,35 @@ export function AdminConsole({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  async function load() {
-    setError("");
+  const load = useCallback(async () => {
     try {
-      const [staffResponse, settingsResponse, auditResponse] = await Promise.all([
-        fetch("/api/v1/admin/staff", { cache: "no-store" }),
-        fetch("/api/v1/admin/settings", { cache: "no-store" }),
-        fetch("/api/v1/admin/audit", { cache: "no-store" }),
-      ]);
-      const [staffData, settingsData, auditData] = await Promise.all([staffResponse.json(), settingsResponse.json(), auditResponse.json()]);
-      for (const response of [staffResponse, settingsResponse, auditResponse]) {
-        if (!response.ok) throw new Error("The administration data could not be loaded.");
-      }
-      setStaff(staffData.staff);
-      setSettings(settingsData);
-      setAudit(auditData.audit);
-      setVerifications(auditData.verifications);
+      const data = await fetchAdminData(section);
+      if (data.staff) setStaff(data.staff);
+      if (data.settings) setSettings(data.settings);
+      if (data.audit) setAudit(data.audit);
+      if (data.verifications) setVerifications(data.verifications);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The administration data could not be loaded.");
     } finally { setLoading(false); }
-  }
+  }, [section]);
+
   useEffect(() => {
-    void Promise.all([
-      fetch("/api/v1/admin/staff", { cache: "no-store" }),
-      fetch("/api/v1/admin/settings", { cache: "no-store" }),
-      fetch("/api/v1/admin/audit", { cache: "no-store" }),
-    ])
-      .then(async ([staffResponse, settingsResponse, auditResponse]) => {
-        const [staffData, settingsData, auditData] = await Promise.all([
-          staffResponse.json(), settingsResponse.json(), auditResponse.json(),
-        ]);
-        if (!staffResponse.ok || !settingsResponse.ok || !auditResponse.ok) {
-          throw new Error("The administration data could not be loaded.");
-        }
-        setStaff(staffData.staff);
-        setSettings(settingsData);
-        setAudit(auditData.audit);
-        setVerifications(auditData.verifications);
+    const controller = new AbortController();
+    void fetchAdminData(section, controller.signal)
+      .then((data) => {
+        if (data.staff) setStaff(data.staff);
+        if (data.settings) setSettings(data.settings);
+        if (data.audit) setAudit(data.audit);
+        if (data.verifications) setVerifications(data.verifications);
       })
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "The administration data could not be loaded."))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch((reason: unknown) => {
+        if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "The administration data could not be loaded.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [section]);
 
   async function createStaff(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -174,7 +192,7 @@ export function AdminConsole({
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div><p className="eyebrow">SYSTEM ADMINISTRATION</p><h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] sm:text-[34px]">{section === "overview" ? "Administration" : section === "staff" ? "Staff accounts" : section === "settings" ? "Barangay setup" : "Activity log"}</h1><p className="mt-1.5 text-[13px] text-[#7d8981]">{section === "overview" ? "A clear view of your barangay service workspace." : section === "staff" ? "Create and manage staff access." : section === "settings" ? "Manage official details used on issued certificates." : "Review administrative actions and document verification activity."}</p></div>
-        <button className="button-secondary" onClick={() => { setLoading(true); void load(); }} type="button"><RefreshCw size={14} /> Refresh data</button>
+        <button className="button-secondary" onClick={() => { setError(""); setLoading(true); void load(); }} type="button"><RefreshCw size={14} /> Refresh data</button>
       </div>
       {section === "overview" && <div className="mt-6 flex items-start gap-3 rounded-xl border border-[#e5ebe4] bg-[#f1f5f0] px-4 py-3">
         <LockKeyhole className="mt-0.5 shrink-0 text-[#63836e]" size={15} />

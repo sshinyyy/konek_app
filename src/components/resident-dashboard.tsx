@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowDownToLine, ArrowRight, ArrowUpRight, CalendarDays, Check, Clock3, FileCheck2, FilePlus2, Files, LoaderCircle, RefreshCw, ShieldCheck, UploadCloud } from "lucide-react";
 
 type ResidentRequest = {
@@ -53,41 +53,37 @@ export function ResidentDashboard({
   const [purpose, setPurpose] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [notice, setNotice] = useState("");
+  const requestLoad = useRef<Promise<void> | null>(null);
 
-  async function loadRequests() {
-    setError("");
-    try {
-      const response = await fetch("/api/v1/requests", { cache: "no-store" });
-      if (!response.ok) throw new Error(await getError(response));
-      const body = await response.json();
-      setRequests(body.requests);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to load requests.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const loadRequests = useCallback(() => {
+    if (requestLoad.current) return requestLoad.current;
+    const pending = (async () => {
+      setError("");
+      try {
+        const response = await fetch("/api/v1/requests", { cache: "no-store" });
+        if (!response.ok) throw new Error(await getError(response));
+        const body = await response.json();
+        setRequests(body.requests);
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : "Unable to load requests.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+    requestLoad.current = pending;
+    void pending.finally(() => {
+      if (requestLoad.current === pending) requestLoad.current = null;
+    });
+    return pending;
+  }, []);
 
   useEffect(() => {
-    void fetch("/api/v1/requests", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(await getError(response));
-        return response.json();
-      })
-      .then((body) => setRequests(body.requests))
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load requests."))
-      .finally(() => setLoading(false));
+    void loadRequests();
     const interval = window.setInterval(() => {
-      void fetch("/api/v1/requests", { cache: "no-store" })
-        .then(async (response) => {
-          if (!response.ok) throw new Error(await getError(response));
-          return response.json();
-        })
-        .then((body) => setRequests(body.requests))
-        .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to refresh requests."));
+      if (document.visibilityState === "visible") void loadRequests();
     }, 30_000);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [loadRequests]);
 
   async function submitRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
