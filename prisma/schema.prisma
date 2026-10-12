@@ -31,6 +31,8 @@ enum DocumentType {
 enum UploadStatus {
   PENDING
   COMPLETE
+  CLEAN
+  REJECTED
 }
 
 model User {
@@ -159,9 +161,9 @@ model AuditLog {
 
 model BarangaySettings {
   id                   Int      @id @default(1)
-  name                 String   @default("Barangay San Isidro")
-  municipality         String   @default("Municipality")
-  province             String   @default("Province")
+  name                 String   @default("Barangay Banonong")
+  municipality         String   @default("Dapitan City")
+  province             String   @default("Zamboanga del Norte")
   captainName          String?
   officeAddress        String?
   contactNumber        String?

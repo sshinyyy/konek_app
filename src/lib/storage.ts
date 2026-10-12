@@ -1,4 +1,5 @@
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -51,6 +52,22 @@ export async function uploadPdf(key: string, content: Uint8Array): Promise<void>
   );
 }
 
+export async function uploadObject(
+  key: string,
+  content: Uint8Array,
+  contentType: string,
+): Promise<void> {
+  await getClient().send(
+    new PutObjectCommand({
+      Bucket: getBucket(),
+      Key: key,
+      Body: content,
+      ContentType: contentType,
+      ContentLength: content.byteLength,
+    }),
+  );
+}
+
 export async function createDownloadUrl(key: string): Promise<string> {
   return getSignedUrl(
     getClient(),
@@ -72,6 +89,33 @@ export async function objectExists(key: string): Promise<boolean> {
 
     throw error;
   }
+}
+
+export async function getObjectMetadata(key: string) {
+  try {
+    const result = await getClient().send(
+      new HeadObjectCommand({ Bucket: getBucket(), Key: key }),
+    );
+    return { contentLength: result.ContentLength, contentType: result.ContentType };
+  } catch (error) {
+    if (error instanceof Error && "$metadata" in error) {
+      const status = (error as Error & { $metadata?: { httpStatusCode?: number } }).$metadata
+        ?.httpStatusCode;
+      if (status === 404) return null;
+    }
+    throw error;
+  }
+}
+
+export async function copyObject(sourceKey: string, destinationKey: string): Promise<void> {
+  const copySource = `${getBucket()}/${sourceKey.split("/").map(encodeURIComponent).join("/")}`;
+  await getClient().send(
+    new CopyObjectCommand({
+      Bucket: getBucket(),
+      Key: destinationKey,
+      CopySource: copySource,
+    }),
+  );
 }
 
 export async function downloadObject(key: string): Promise<Uint8Array> {

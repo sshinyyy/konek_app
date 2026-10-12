@@ -1,10 +1,10 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { RequestStatus } from "@prisma/client";
 import { z } from "zod";
 import { ApiError, assertSameOrigin, errorResponse } from "@/lib/api";
 import { getSession, isStaff } from "@/lib/auth";
 import { decrypt, sha256 } from "@/lib/crypto";
 import { renderCertificate } from "@/lib/document";
+import { claimRequestTransition } from "@/lib/request-state";
 import { withRlsContext } from "@/lib/rls";
 import { deleteObject, uploadPdf } from "@/lib/storage";
 
@@ -13,7 +13,6 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reject"), remarks: z.string().trim().min(3).max(1000) }),
   z.object({ action: z.literal("issue"), remarks: z.string().trim().max(1000).optional() }),
 ]);
-const openStatuses = new Set<RequestStatus>([RequestStatus.PENDING, RequestStatus.IN_REVIEW]);
 
 export async function PATCH(
   request: Request,
@@ -30,12 +29,9 @@ export async function PATCH(
 
     if (parsed.data.action === "review") {
       const result = await withRlsContext(session, async (tx) => {
-        const existing = await tx.documentRequest.findUnique({ where: { id }, select: { status: true } });
-        if (!existing) throw new ApiError(404, "Request not found.");
-        if (existing.status !== RequestStatus.PENDING) throw new ApiError(409, "This request is no longer pending.");
-        const updated = await tx.documentRequest.update({
+        await claimRequestTransition(tx, id, "review", { decidedById: session.userId });
+        const updated = await tx.documentRequest.findUniqueOrThrow({
           where: { id },
-          data: { status: RequestStatus.IN_REVIEW, decidedById: session.userId },
           select: { referenceNo: true, status: true },
         });
         await tx.auditLog.create({
@@ -49,14 +45,12 @@ export async function PATCH(
     if (parsed.data.action === "reject") {
       const remarks = parsed.data.remarks;
       const updated = await withRlsContext(session, async (tx) => {
-        const existing = await tx.documentRequest.findUnique({ where: { id }, select: { status: true } });
-        if (!existing) throw new ApiError(404, "Request not found.");
-        if (!openStatuses.has(existing.status)) {
-          throw new ApiError(409, "This request has already been processed.");
-        }
-        const result = await tx.documentRequest.update({
+        await claimRequestTransition(tx, id, "reject", {
+          remarks,
+          decidedById: session.userId,
+        });
+        const result = await tx.documentRequest.findUniqueOrThrow({
           where: { id },
-          data: { status: RequestStatus.REJECTED, remarks, decidedById: session.userId },
           select: { referenceNo: true, status: true, remarks: true },
         });
         await tx.auditLog.create({
@@ -75,7 +69,7 @@ export async function PATCH(
       }),
     );
     if (!requestDetails) throw new ApiError(404, "Request not found.");
-    if (!openStatuses.has(requestDetails.status)) {
+    if (requestDetails.status !== "PENDING" && requestDetails.status !== "IN_REVIEW") {
       throw new ApiError(409, "This request has already been processed.");
     }
     if (!requestDetails.resident.profile) throw new ApiError(409, "The resident profile is incomplete.");
@@ -117,10 +111,10 @@ export async function PATCH(
     await uploadPdf(objectKey, bytes);
     try {
       const result = await withRlsContext(session, async (tx) => {
-        const current = await tx.documentRequest.findUnique({ where: { id }, select: { status: true } });
-        if (!current || !openStatuses.has(current.status)) {
-          throw new ApiError(409, "This request was already processed by another staff member.");
-        }
+        await claimRequestTransition(tx, id, "issue", {
+          decidedById: session.userId,
+          remarks: remarks?.trim() || null,
+        });
         const issued = await tx.issuedDocument.create({
           data: {
             id: documentId,
@@ -137,11 +131,7 @@ export async function PATCH(
         });
         await tx.documentRequest.update({
           where: { id },
-          data: {
-            status: RequestStatus.ISSUED,
-            remarks: remarks?.trim() || null,
-            decidedById: session.userId,
-          },
+          data: { status: "ISSUED" },
         });
         await tx.auditLog.create({
           data: { actorId: session.userId, action: "DOCUMENT_ISSUED", entity: "DocumentRequest", entityId: id },

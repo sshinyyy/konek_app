@@ -18,20 +18,30 @@ export async function GET(
       }),
     );
     if (!requestRecord) throw new ApiError(404, "Request receipt not found.");
+    const settings = await withRlsContext(session, (tx) =>
+      tx.barangaySettings.findUnique({
+        where: { id: 1 },
+        select: { name: true, municipality: true, province: true },
+      }),
+    );
+    if (!settings) throw new ApiError(503, "Barangay document settings are unavailable.");
     const pdf = await PDFDocument.create();
     const page = pdf.addPage([612, 792]);
     const font = await pdf.embedFont(StandardFonts.Helvetica);
     const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-    page.drawText("BARANGAY SAN ISIDRO", { x: 64, y: 720, size: 18, font: bold, color: rgb(0.12, 0.25, 0.2) });
-    page.drawText("DOCUMENT REQUEST RECEIPT", { x: 64, y: 684, size: 14, font: bold });
-    page.drawLine({ start: { x: 64, y: 665 }, end: { x: 548, y: 665 }, thickness: 1 });
+    page.drawText(settings.name.toUpperCase(), { x: 64, y: 720, size: 18, font: bold, color: rgb(0.12, 0.25, 0.2) });
+    page.drawText(`${settings.municipality.toUpperCase()}, ${settings.province.toUpperCase()}`, {
+      x: 64, y: 700, size: 10, font, color: rgb(0.35, 0.39, 0.37),
+    });
+    page.drawText("DOCUMENT REQUEST RECEIPT", { x: 64, y: 674, size: 14, font: bold });
+    page.drawLine({ start: { x: 64, y: 655 }, end: { x: 548, y: 655 }, thickness: 1 });
     [
       `Reference number: ${requestRecord.referenceNo}`,
       `Document: ${requestRecord.type.replaceAll("_", " ")}`,
       `Status: ${requestRecord.status.replaceAll("_", " ")}`,
       `Purpose: ${requestRecord.purpose}`,
       `Submitted: ${requestRecord.submittedAt.toLocaleString("en-PH")}`,
-    ].forEach((line, index) => page.drawText(line, { x: 64, y: 626 - index * 30, size: 11, font }));
+    ].forEach((line, index) => page.drawText(line, { x: 64, y: 616 - index * 30, size: 11, font }));
     page.drawText("Keep this receipt for your records. Track your request in the resident portal.", {
       x: 64, y: 428, size: 10, font, color: rgb(0.35, 0.39, 0.37),
     });

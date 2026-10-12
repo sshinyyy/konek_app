@@ -1,0 +1,2 @@
+ALTER TYPE "UploadStatus" ADD VALUE 'CLEAN';
+ALTER TYPE "UploadStatus" ADD VALUE 'REJECTED';

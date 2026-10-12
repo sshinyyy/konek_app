@@ -2,14 +2,16 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { ApiError, assertSameOrigin, errorResponse } from "@/lib/api";
 import { getSession } from "@/lib/auth";
+import { fileExtensionForMime, MAX_SUPPORTING_FILE_BYTES } from "@/lib/file-safety";
 import { withRlsContext } from "@/lib/rls";
+import { rateLimitResponse } from "@/lib/rate-limit";
 import { createUploadUrl } from "@/lib/storage";
 
 const schema = z.object({
   requestId: z.uuid(),
   fileName: z.string().trim().min(1).max(255),
   mimeType: z.enum(["application/pdf", "image/jpeg", "image/png", "image/webp"]),
-  sizeBytes: z.number().int().min(1).max(10 * 1024 * 1024),
+  sizeBytes: z.number().int().min(1).max(MAX_SUPPORTING_FILE_BYTES),
 });
 
 export async function POST(request: Request) {
@@ -18,6 +20,8 @@ export async function POST(request: Request) {
     const session = await getSession();
     if (!session) throw new ApiError(401, "Authentication required.");
     if (session.role !== "RESIDENT") throw new ApiError(403, "Only residents can upload requirements.");
+    const limited = await rateLimitResponse(request, "upload", session.userId);
+    if (limited) return limited;
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) throw new ApiError(400, "The file type or size is not allowed.");
     const input = parsed.data;
@@ -27,8 +31,8 @@ export async function POST(request: Request) {
         select: { id: true },
       });
       if (!target) throw new ApiError(404, "Open request not found.");
-      const extension = input.fileName.split(".").pop()?.toLowerCase() ?? "file";
-      const objectKey = `requirements/${session.userId}/${randomUUID()}.${extension}`;
+      const extension = fileExtensionForMime(input.mimeType);
+      const objectKey = `quarantine/${session.userId}/${randomUUID()}.${extension}`;
       const uploadUrl = await createUploadUrl(objectKey, input.mimeType, input.sizeBytes);
       const upload = await tx.supportingDocument.create({
         data: {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session-token";
+import { roleCanAccessPath } from "@/lib/session-access";
 
 const publicPaths = ["/login", "/register", "/verify", "/privacy"];
 
@@ -23,14 +24,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(login);
   }
 
-  const staffPath =
-    pathname === "/staff" ||
-    /^\/api\/v1\/requests\/[^/]+\/decision\/?$/.test(pathname);
-  const adminPath = pathname === "/admin";
-  if (
-    (staffPath && !["STAFF", "ADMIN"].includes(session.role)) ||
-    (adminPath && session.role !== "ADMIN")
-  ) {
+  if (!roleCanAccessPath(session.role, pathname)) {
     return isApi
       ? NextResponse.json({ error: "You do not have permission to access this resource." }, { status: 403 })
       : NextResponse.redirect(new URL("/", request.url));

@@ -7,6 +7,7 @@ import { assertSameOrigin, ApiError, errorResponse } from "@/lib/api";
 import { createSessionToken, SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,8 @@ const schema = z.object({
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
+    const limited = await rateLimitResponse(request, "register");
+    if (limited) return limited;
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) throw new ApiError(400, "Please check your registration details.");
     const input = parsed.data;

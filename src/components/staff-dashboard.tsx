@@ -126,7 +126,7 @@ export function StaffDashboard({
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><p className="eyebrow">STAFF WORKSPACE · BARANGAY SAN ISIDRO</p><h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] sm:text-[34px]">Good day, {staffName.split(" ")[0]}.</h1><p className="mt-1.5 text-[13px] text-[#7d8981]">Review resident requests and issue verified documents.</p></div>
+        <div><p className="eyebrow">STAFF WORKSPACE</p><h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] sm:text-[34px]">Good day, {staffName.split(" ")[0]}.</h1><p className="mt-1.5 text-[13px] text-[#7d8981]">Review resident requests and issue verified documents.</p></div>
         <button className="button-secondary" onClick={() => { setLoading(true); void refresh(); }} type="button"><RefreshCw size={14} /> Refresh queue</button>
       </div>
 

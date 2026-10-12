@@ -1,17 +1,18 @@
 import { createHash } from "node:crypto";
-import { z } from "zod";
 import { ApiError, errorResponse } from "@/lib/api";
 import { decrypt, sha256 } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
+import { rateLimitResponse } from "@/lib/rate-limit";
+import { isVerificationToken } from "@/lib/verification-token";
 
 export const runtime = "nodejs";
 
-const schema = z.string().min(32).max(128).regex(/^[A-Za-z0-9_-]+$/);
-
 export async function GET(request: Request) {
   try {
+    const limited = await rateLimitResponse(request, "verify");
+    if (limited) return limited;
     const token = new URL(request.url).searchParams.get("token") ?? "";
-    if (!schema.safeParse(token).success) {
+    if (!isVerificationToken(token)) {
       return Response.json({ authentic: false, message: "Invalid or forged document." });
     }
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";

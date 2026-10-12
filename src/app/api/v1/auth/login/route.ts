@@ -5,12 +5,15 @@ import { z } from "zod";
 import { assertSameOrigin, ApiError, errorResponse } from "@/lib/api";
 import { createSessionToken, SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/auth";
 import { withRlsContext } from "@/lib/rls";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 const schema = z.object({ email: z.email().max(320), password: z.string().min(1).max(128) });
 
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
+    const limited = await rateLimitResponse(request, "login");
+    if (limited) return limited;
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) throw new ApiError(400, "Enter a valid email and password.");
     const email = parsed.data.email.trim().toLowerCase();
