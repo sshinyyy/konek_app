@@ -21,5 +21,5 @@ export default async function HomePage() {
     day: "numeric",
     year: "numeric",
   }).toUpperCase();
-  return <AppShell role={session.role} email={session.email} fullName={name}><ResidentDashboard fullName={name} today={today} /></AppShell>;
+  return <AppShell role={session.role} email={session.email} fullName={name}><ResidentDashboard key="overview" fullName={name} today={today} /></AppShell>;
 }

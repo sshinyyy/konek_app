@@ -25,7 +25,13 @@ function extractToken(value: string): string {
   }
 }
 
-export function VerificationPortal({ initialToken }: { initialToken: string }) {
+export function VerificationPortal({
+  initialToken,
+  embedded = false,
+}: {
+  initialToken: string;
+  embedded?: boolean;
+}) {
   const [input, setInput] = useState(initialToken);
   const [result, setResult] = useState<Result | null>(null);
   const [busy, setBusy] = useState(Boolean(initialToken));
@@ -65,13 +71,13 @@ export function VerificationPortal({ initialToken }: { initialToken: string }) {
   }, [initialToken]);
 
   return (
-    <main className="min-h-screen bg-[#f6f8f5] px-4 py-8 sm:px-6 sm:py-12">
+    <main className={embedded ? "px-0 py-0" : "min-h-screen bg-[#f6f8f5] px-4 py-8 sm:px-6 sm:py-12"}>
       <div className="mx-auto max-w-[600px]">
-        <Link className="inline-flex items-center gap-2 text-[12px] font-medium text-[#64746a] hover:text-[#145b43]" href="/login"><ArrowLeft size={14} /> Barangay services</Link>
-        <div className="mt-7 flex items-center gap-3">
+        {!embedded && <Link className="inline-flex items-center gap-2 text-[12px] font-medium text-[#64746a] hover:text-[#145b43]" href="/login"><ArrowLeft size={14} /> Barangay services</Link>}
+        {!embedded && <div className="mt-7 flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#145b43] text-white"><span className="text-lg font-semibold">k.</span></span>
           <span><span className="block text-[14px] font-bold text-[#253a30]">konek<span className="font-normal">barangay</span></span><span className="mt-0.5 block text-[9px] tracking-[.13em] text-[#89958d]">OFFICIAL DOCUMENT CHECK</span></span>
-        </div>
+        </div>}
         <div className="mt-8">
           <p className="eyebrow">PUBLIC VERIFICATION PORTAL</p>
           <h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] text-[#23372d] sm:text-[34px]">Check a document.</h1>

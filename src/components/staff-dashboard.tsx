@@ -33,9 +33,11 @@ type StaffProfile = { fullName: string; jobTitle: string; phone: string };
 export function StaffDashboard({
   staffName,
   initialProfile,
+  section = "dashboard",
 }: {
   staffName: string;
   initialProfile: StaffProfile;
+  section?: "dashboard" | "profile";
 }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [profile, setProfile] = useState(initialProfile);
@@ -48,6 +50,7 @@ export function StaffDashboard({
   const [savingProfile, setSavingProfile] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const hasDisplayName = !staffName.includes("@");
 
   async function refresh() {
     try {
@@ -61,6 +64,7 @@ export function StaffDashboard({
     } finally { setLoading(false); }
   }
   useEffect(() => {
+    if (section === "profile") return;
     void fetch("/api/v1/requests", { cache: "no-store" })
       .then(async (response) => {
         const body = await response.json();
@@ -70,7 +74,7 @@ export function StaffDashboard({
       .then(setRows)
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Requests could not be loaded."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [section]);
 
   const counts = useMemo(() => ({
     pending: rows.filter((row) => row.status === "PENDING").length,
@@ -126,25 +130,25 @@ export function StaffDashboard({
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><p className="eyebrow">STAFF WORKSPACE</p><h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] sm:text-[34px]">Good day, {staffName.split(" ")[0]}.</h1><p className="mt-1.5 text-[13px] text-[#7d8981]">Review resident requests and issue verified documents.</p></div>
-        <button className="button-secondary" onClick={() => { setLoading(true); void refresh(); }} type="button"><RefreshCw size={14} /> Refresh queue</button>
+        <div><p className="eyebrow">{section === "dashboard" ? "REQUEST PROCESSING" : "STAFF WORKSPACE"}</p><h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] sm:text-[34px]">{section === "dashboard" ? hasDisplayName ? `Good day, ${staffName.split(" ")[0]}.` : "Request queue" : "Your staff profile"}</h1><p className="mt-1.5 text-[13px] text-[#7d8981]">{section === "dashboard" ? "Review resident requests and issue verified documents." : "Manage the staff details shown in your workspace."}</p></div>
+        {section === "dashboard" && <button className="button-secondary" onClick={() => { setLoading(true); void refresh(); }} type="button"><RefreshCw size={14} /> Refresh queue</button>}
       </div>
 
-      <div className="mt-7 grid grid-cols-2 gap-3 xl:grid-cols-4">
+      {section === "dashboard" && <div className="mt-7 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           { title: "Awaiting review", count: counts.pending, icon: Clock3, tone: "text-[#b98532]" },
           { title: "In review", count: counts.review, icon: Search, tone: "text-[#607fa4]" },
           { title: "Documents issued", count: counts.issued, icon: FileCheck2, tone: "text-[#508064]" },
           { title: "Declined", count: counts.rejected, icon: Files, tone: "text-[#a66758]" },
         ].map(({ title, count, icon: Icon, tone }) => <div className="card flex items-center gap-3 p-4" key={title}><span className={`flex h-9 w-9 items-center justify-center rounded-lg bg-[#f2f5f1] ${tone}`}><Icon size={17} /></span><div><p className="text-[10px] text-[#87928a]">{title}</p><p className="mt-0.5 text-[22px] font-semibold text-[#304238]">{loading ? "—" : count}</p></div></div>)}
-      </div>
+      </div>}
 
-      <section className="card mt-5 p-5">
+      {section === "profile" && <section className="card mt-6 max-w-[820px] p-5 sm:p-7">
         <div className="mb-4 flex items-start gap-3">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#eff4ef] text-[#60836e]"><UserRound size={17} /></span>
           <div><p className="eyebrow">YOUR ACCOUNT</p><h2 className="mt-1 text-[16px] font-semibold">Staff profile</h2><p className="mt-1 text-[11px] text-[#87928a]">Add the details shown in your staff workspace.</p></div>
         </div>
-        <form className="grid gap-3 sm:grid-cols-3" onSubmit={saveProfile}>
+        <form className="grid gap-4 sm:grid-cols-2" onSubmit={saveProfile}>
           <label className="text-[11px] font-semibold text-[#536157]">Full name
             <input autoComplete="name" className="field mt-1.5 min-h-[38px] text-[11px]" maxLength={150} minLength={2} onChange={(event) => setProfile((current) => ({ ...current, fullName: event.target.value }))} required value={profile.fullName} />
           </label>
@@ -154,17 +158,17 @@ export function StaffDashboard({
           <label className="text-[11px] font-semibold text-[#536157]">Contact number
             <input autoComplete="tel" className="field mt-1.5 min-h-[38px] text-[11px]" onChange={(event) => setProfile((current) => ({ ...current, phone: event.target.value }))} pattern="\+?[0-9 ()-]{7,20}" placeholder="+63 9XX XXX XXXX" required value={profile.phone} />
           </label>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf0ed] pt-3 sm:col-span-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf0ed] pt-4 sm:col-span-2">
             <p className="text-[10px] text-[#87928a]">Your name and contact number are encrypted in storage.</p>
             <button className="button-primary min-h-[36px] text-[10px]" disabled={savingProfile} type="submit">{savingProfile ? <LoaderCircle className="animate-spin" size={14} /> : <Check size={14} />} Save profile</button>
           </div>
         </form>
-      </section>
+      </section>}
 
       {notice && <p aria-live="polite" className="mt-4 flex items-center gap-2 rounded-lg border border-[#d9e9db] bg-[#f0f7f0] px-4 py-3 text-[12px] text-[#3d754e]"><Check size={14} />{notice}</p>}
       {error && <p aria-live="polite" className="mt-4 rounded-lg border border-[#f0d5d0] bg-[#fff6f4] px-4 py-3 text-[12px] text-[#a14d3d]">{error}</p>}
 
-      <div className="mt-7 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,.78fr)]">
+      {section === "dashboard" && <div className="mt-7 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,.78fr)]">
         <section className="card min-w-0 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#edf0ed] p-4">
             <div><p className="eyebrow">APPLICATIONS</p><h2 className="mt-1 text-[16px] font-semibold">Request queue</h2></div>
@@ -218,7 +222,7 @@ export function StaffDashboard({
             </div>
           </> : <div className="flex min-h-[280px] flex-col items-center justify-center px-5 text-center"><span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f0f4ef] text-[#799481]"><Files size={18} /></span><p className="mt-3 text-[12px] font-semibold text-[#526057]">Select a request to review</p><p className="mt-1 max-w-[210px] text-[10px] leading-4 text-[#9ba49e]">Resident details and supporting documents will appear here.</p></div>}
         </section>
-      </div>
+      </div>}
       <p className="mt-5 flex items-center gap-1.5 text-[10px] text-[#a1aaa3]"><ShieldCheck size={12} /> All staff actions are recorded in the system audit log.</p>
     </>
   );

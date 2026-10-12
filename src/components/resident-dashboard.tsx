@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowDownToLine, ArrowRight, ArrowUpRight, CalendarDays, Check, Clock3, FileCheck2, FilePlus2, Files, LoaderCircle, RefreshCw, ShieldCheck, UploadCloud } from "lucide-react";
 
@@ -34,11 +35,19 @@ async function getError(response: Response) {
   return result.error ?? "The request could not be completed.";
 }
 
-export function ResidentDashboard({ fullName, today }: { fullName: string; today: string }) {
+export function ResidentDashboard({
+  fullName,
+  today,
+  section = "overview",
+}: {
+  fullName: string;
+  today: string;
+  section?: "overview" | "requests";
+}) {
   const [requests, setRequests] = useState<ResidentRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(section === "requests");
   const [submitting, setSubmitting] = useState(false);
   const [type, setType] = useState("BARANGAY_CLEARANCE");
   const [purpose, setPurpose] = useState("");
@@ -133,15 +142,14 @@ export function ResidentDashboard({ fullName, today }: { fullName: string; today
 
   return (
     <>
+      {section === "overview" ? <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">{today} <span className="px-1.5 text-[#c5cdc6]">·</span> RESIDENT PORTAL</p>
           <h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] text-[#24372e] sm:text-[34px]">Good day, {fullName.split(" ")[0]}.</h1>
           <p className="mt-1.5 text-[13px] text-[#7d8981]">Your community services, all in one place.</p>
         </div>
-        <button className="button-primary" onClick={() => setShowForm((value) => !value)} type="button">
-          <FilePlus2 size={16} /> New request
-        </button>
+        <Link className="button-primary" href="/requests"><FilePlus2 size={16} /> New request</Link>
       </div>
 
       <div className="mt-7 grid gap-3 sm:grid-cols-3">
@@ -161,6 +169,10 @@ export function ResidentDashboard({ fullName, today }: { fullName: string; today
         <p className="flex items-center gap-2 text-[12px] text-[#64746a]"><ShieldCheck size={15} className="text-[#477661]" /> Issued documents include a QR code for authenticity checks.</p>
         <a className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#175b43] hover:underline" href="/verify">Verify a document <ArrowUpRight size={14} /></a>
       </div>
+      </> : <div className="flex flex-wrap items-end justify-between gap-4">
+        <div><p className="eyebrow">RESIDENT SERVICES</p><h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] text-[#24372e] sm:text-[34px]">Your requests</h1><p className="mt-1.5 text-[13px] text-[#7d8981]">Submit an application and follow its progress.</p></div>
+        <button className="button-primary" onClick={() => setShowForm((value) => !value)} type="button"><FilePlus2 size={16} /> {showForm ? "Hide form" : "New request"}</button>
+      </div>}
 
       {showForm && (
         <section className="card mt-7 p-5 sm:p-6">
@@ -202,8 +214,11 @@ export function ResidentDashboard({ fullName, today }: { fullName: string; today
 
       <section className="mt-8" id="requests">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div><p className="eyebrow">YOUR ACTIVITY</p><h2 className="mt-1 text-[19px] font-semibold tracking-tight">Recent requests</h2></div>
-          <button className="button-secondary min-h-[35px] text-[11px]" onClick={() => { setLoading(true); void loadRequests(); }} type="button"><RefreshCw size={13} /> Refresh</button>
+          <div><p className="eyebrow">YOUR ACTIVITY</p><h2 className="mt-1 text-[19px] font-semibold tracking-tight">{section === "overview" ? "Recent requests" : "All requests"}</h2></div>
+          <div className="flex items-center gap-2">
+            {section === "overview" && <Link className="button-secondary min-h-[35px] text-[11px]" href="/requests">View all <ArrowRight size={13} /></Link>}
+            <button className="button-secondary min-h-[35px] text-[11px]" onClick={() => { setLoading(true); void loadRequests(); }} type="button"><RefreshCw size={13} /> Refresh</button>
+          </div>
         </div>
         <div className="card overflow-hidden">
           {loading ? <div className="flex items-center justify-center gap-2 py-14 text-[12px] text-[#909b94]"><LoaderCircle className="animate-spin" size={16} />Loading your requests…</div>
@@ -216,7 +231,7 @@ export function ResidentDashboard({ fullName, today }: { fullName: string; today
               </div>
             ) : (
               <div className="divide-y divide-[#edf0ed]">
-                {requests.slice(0, 8).map((request) => (
+                {(section === "overview" ? requests.slice(0, 4) : requests).map((request) => (
                   <article className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5" key={request.id}>
                     <div className="flex min-w-0 items-start gap-3">
                       <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f0f4ef] text-[#60836e]"><Files size={16} /></span>

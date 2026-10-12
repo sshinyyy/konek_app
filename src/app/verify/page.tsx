@@ -1,4 +1,6 @@
 import { VerificationPortal } from "@/components/verification-portal";
+import { AppShell } from "@/components/app-shell";
+import { getSession } from "@/lib/auth";
 
 export const metadata = {
   title: "Verify a document · Konek Barangay",
@@ -12,5 +14,11 @@ export default async function VerifyPage({
   searchParams: Promise<{ token?: string }>;
 }) {
   const params = await searchParams;
-  return <VerificationPortal initialToken={params.token ?? ""} />;
+  const session = await getSession();
+  if (!session) return <VerificationPortal initialToken={params.token ?? ""} />;
+  return (
+    <AppShell role={session.role} email={session.email} fullName={session.email}>
+      <VerificationPortal initialToken={params.token ?? ""} embedded />
+    </AppShell>
+  );
 }

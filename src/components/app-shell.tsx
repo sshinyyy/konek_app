@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BadgeCheck, Files, LayoutDashboard, LogOut, Settings2, ShieldCheck, UserRound } from "lucide-react";
+import { Activity, BadgeCheck, Files, LayoutDashboard, LogOut, Settings2, ShieldCheck, UserRound, Users } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 type Props = {
@@ -19,27 +19,37 @@ export function AppShell({ role, email, fullName, children }: Props) {
   const nav = role === "RESIDENT"
     ? [
         { href: "/", label: "Overview", icon: LayoutDashboard },
-        { href: "/#requests", label: "Requests", icon: Files },
+        { href: "/requests", label: "Requests", icon: Files },
         { href: "/profile", label: "My profile", icon: UserRound },
         { href: "/verify", label: "Verify", icon: ShieldCheck },
       ]
     : role === "STAFF"
       ? [
           { href: "/staff", label: "Dashboard", icon: LayoutDashboard },
+          { href: "/staff/profile", label: "My profile", icon: UserRound },
           { href: "/verify", label: "Verify", icon: BadgeCheck },
         ]
       : [
           { href: "/admin", label: "Overview", icon: LayoutDashboard },
-          { href: "/admin#staff", label: "Staff", icon: UserRound },
-          { href: "/admin#settings", label: "Setup", icon: Settings2 },
+          { href: "/staff", label: "Requests", icon: Files },
+          { href: "/admin/staff", label: "Staff", icon: Users },
+          { href: "/admin/settings", label: "Setup", icon: Settings2 },
+          { href: "/admin/activity", label: "Activity", icon: Activity },
           { href: "/verify", label: "Verify", icon: ShieldCheck },
         ];
-  const section = pathname === "/staff" ? "Staff workspace"
-    : pathname === "/admin" ? "System administration"
-      : pathname === "/profile" ? "My profile"
-        : role === "STAFF" ? "Staff workspace"
-          : role === "ADMIN" ? "System administration"
-            : "Resident portal";
+  const pageTitle = pathname === "/" ? "Overview"
+    : pathname === "/requests" ? "My requests"
+      : pathname === "/profile" || pathname === "/staff/profile" ? "My profile"
+        : pathname === "/verify" ? "Document verification"
+          : pathname === "/admin/staff" ? "Staff accounts"
+            : pathname === "/admin/settings" ? "Barangay setup"
+              : pathname === "/admin/activity" ? "Activity log"
+                : pathname === "/staff" ? "Request queue"
+                  : pathname === "/admin" ? "Administration"
+                    : "Workspace";
+  const section = role === "ADMIN" ? "System administration"
+    : role === "STAFF" ? "Staff workspace"
+      : "Resident portal";
 
   async function signOut() {
     setSignOutError("");
@@ -68,9 +78,9 @@ export function AppShell({ role, email, fullName, children }: Props) {
         <p className="sidebar-label mb-2 px-3 text-[9px] font-bold tracking-[.12em] text-[#929d95]">WORKSPACE</p>
         <nav className="flex flex-col gap-1">
           {nav.map(({ href, label, icon: Icon }) => {
-            const active = !href.includes("#") && pathname === href;
+            const active = pathname === href;
             return (
-              <Link className={`nav-link ${active ? "active" : ""}`} href={href} key={href}>
+              <Link aria-current={active ? "page" : undefined} className={`nav-link ${active ? "active" : ""}`} href={href} key={href}>
                 <Icon size={17} strokeWidth={1.8} />
                 <span>{label}</span>
               </Link>
@@ -94,9 +104,12 @@ export function AppShell({ role, email, fullName, children }: Props) {
       </aside>
       <div className="main-area">
         <header className="topbar">
-          <p className="text-[12px] text-[#808b84]">{section}<span className="px-2 text-[#c7cec8]">/</span><span className="text-[#46554c]">{pathname === "/" ? "Overview" : pathname.slice(1).replaceAll("/", " ")}</span></p>
+          <div className="min-w-0">
+            <p className="hidden text-[10px] font-semibold uppercase tracking-[.13em] text-[#8b978f] sm:block">{section}</p>
+            <p className="truncate text-[13px] font-semibold text-[#35473c]">{pageTitle}</p>
+          </div>
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-2 text-[11px] font-medium text-[#64756b]"><span className="h-2 w-2 rounded-full bg-[#59a77a]" /> Secure resident services</span>
+            <span className="hidden items-center gap-2 text-[11px] font-medium text-[#64756b] sm:flex"><span className="h-2 w-2 rounded-full bg-[#59a77a]" /> Secure services</span>
             <button aria-label="Sign out" className="button-secondary min-h-[34px] px-2.5 text-[10px] md:hidden" onClick={signOut} type="button"><LogOut size={14} /></button>
           </div>
         </header>

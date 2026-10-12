@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Activity, Check, CircleAlert, FileCog, LoaderCircle, LockKeyhole, Plus, RefreshCw, ShieldCheck, UserCheck, UserRoundX, Users } from "lucide-react";
 
@@ -24,7 +25,13 @@ const emptySettings: Settings = {
 };
 const label = "mb-1.5 block text-[11px] font-semibold text-[#536157]";
 
-export function AdminConsole({ email }: { email: string }) {
+export function AdminConsole({
+  email,
+  section = "overview",
+}: {
+  email: string;
+  section?: "overview" | "staff" | "settings" | "activity";
+}) {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [settings, setSettings] = useState<Settings>(emptySettings);
   const [audit, setAudit] = useState<Audit[]>([]);
@@ -166,25 +173,40 @@ export function AdminConsole({ email }: { email: string }) {
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><p className="eyebrow">SYSTEM ADMINISTRATION</p><h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] sm:text-[34px]">Barangay settings</h1><p className="mt-1.5 text-[13px] text-[#7d8981]">Manage staff access, official details, and issued-document records.</p></div>
+        <div><p className="eyebrow">SYSTEM ADMINISTRATION</p><h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] sm:text-[34px]">{section === "overview" ? "Administration" : section === "staff" ? "Staff accounts" : section === "settings" ? "Barangay setup" : "Activity log"}</h1><p className="mt-1.5 text-[13px] text-[#7d8981]">{section === "overview" ? "A clear view of your barangay service workspace." : section === "staff" ? "Create and manage staff access." : section === "settings" ? "Manage official details used on issued certificates." : "Review administrative actions and document verification activity."}</p></div>
         <button className="button-secondary" onClick={() => { setLoading(true); void load(); }} type="button"><RefreshCw size={14} /> Refresh data</button>
       </div>
-      <div className="mt-6 flex items-start gap-3 rounded-lg border border-[#e5ebe4] bg-[#f1f5f0] px-4 py-3">
+      {section === "overview" && <div className="mt-6 flex items-start gap-3 rounded-xl border border-[#e5ebe4] bg-[#f1f5f0] px-4 py-3">
         <LockKeyhole className="mt-0.5 shrink-0 text-[#63836e]" size={15} />
         <p className="text-[11px] leading-5 text-[#66766b]"><span className="font-semibold">Signed in as {email}.</span> Administrative actions and document verification scans are recorded for review.</p>
-      </div>
+      </div>}
       {error && <p aria-live="polite" className="mt-4 rounded-lg border border-[#f0d5d0] bg-[#fff6f4] px-4 py-3 text-[12px] text-[#a14d3d]">{error}</p>}
       {notice && <p aria-live="polite" className="mt-4 flex items-center gap-2 rounded-lg border border-[#d9e9db] bg-[#f0f7f0] px-4 py-3 text-[12px] text-[#3d754e]"><Check size={14} />{notice}</p>}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      {section === "overview" && <div className="mt-6 grid gap-4 sm:grid-cols-3">
         {[
           { label: "Staff accounts", value: staff.length, icon: Users },
           { label: "Verification scans", value: verifications.length, icon: ShieldCheck },
           { label: "Logged admin actions", value: audit.length, icon: Activity },
         ].map(({ label: title, value, icon: Icon }) => <div className="card flex items-center gap-3 p-4" key={title}><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#eff4ef] text-[#60836e]"><Icon size={16} /></span><div><p className="text-[10px] text-[#87928a]">{title}</p><p className="mt-0.5 text-[21px] font-semibold text-[#304238]">{loading ? "—" : value}</p></div></div>)}
-      </div>
+      </div>}
 
-      <div className="mt-5 grid items-start gap-4 lg:grid-cols-2">
+      {section === "overview" && <section className="mt-6">
+        <div className="mb-3"><p className="eyebrow">QUICK ACCESS</p><h2 className="mt-1 text-[18px] font-semibold tracking-tight text-[#2c4034]">Manage your workspace</h2></div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { href: "/staff", title: "Request queue", detail: "Review applications and issue documents", icon: ShieldCheck },
+            { href: "/admin/staff", title: "Staff accounts", detail: "Manage access to the staff workspace", icon: Users },
+            { href: "/admin/settings", title: "Barangay setup", detail: "Update official certificate details", icon: FileCog },
+            { href: "/admin/activity", title: "Activity log", detail: "Review administrative and verification events", icon: Activity },
+          ].map(({ href, title, detail, icon: Icon }) => <Link className="card group flex items-start gap-3 p-4 transition hover:-translate-y-0.5 hover:border-[#cbdacb] hover:shadow-md" href={href} key={href}>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ed] text-[#5e8269]"><Icon size={18} /></span>
+            <span><span className="block text-[12px] font-semibold text-[#36483c]">{title}</span><span className="mt-1 block text-[10px] leading-4 text-[#87938a]">{detail}</span></span>
+          </Link>)}
+        </div>
+      </section>}
+
+      {section === "settings" && <div className="mt-6 max-w-[900px]">
         <section className="card p-5" id="settings">
           <div className="mb-5 flex items-start gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#eff4ef] text-[#60836e]"><FileCog size={17} /></span><div><p className="eyebrow">CERTIFICATE IDENTITY</p><h2 className="mt-1 text-[16px] font-semibold">Official barangay details</h2></div></div>
           {loading ? <p className="py-8 text-[11px] text-[#909b94]"><LoaderCircle className="mr-2 inline animate-spin" size={14} />Loading settings…</p> : <form className="space-y-3.5" onSubmit={saveSettings}>
@@ -199,8 +221,9 @@ export function AdminConsole({ email }: { email: string }) {
             <div className="flex justify-end border-t border-[#edf0ed] pt-3"><button className="button-primary min-h-[37px] text-[11px]" disabled={busy} type="submit">{busy ? <LoaderCircle className="animate-spin" size={14} /> : <Check size={14} />} Save certificate settings</button></div>
           </form>}
         </section>
+      </div>}
 
-        <div className="space-y-4">
+      {section === "staff" && <div className="mt-6 max-w-[900px]">
           <section className="card p-5" id="staff">
             <div className="mb-4 flex items-start gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#eff4ef] text-[#60836e]"><Users size={17} /></span><div><p className="eyebrow">ACCESS CONTROL</p><h2 className="mt-1 text-[16px] font-semibold">Staff accounts</h2></div></div>
             <form className="space-y-2.5 rounded-lg bg-[#f8faf7] p-3" onSubmit={createStaff}>
@@ -213,6 +236,9 @@ export function AdminConsole({ email }: { email: string }) {
             </div>
             <p className="mt-2 text-[9px] leading-4 text-[#9aa49d]">Share initial passwords through a secure channel and ask staff to update them.</p>
           </section>
+      </div>}
+
+      {section === "activity" && <div className="mt-6 max-w-[900px]">
           <section className="card overflow-hidden">
             <div className="flex items-center justify-between border-b border-[#edf0ed] p-4"><div><p className="eyebrow">SECURITY & COMPLIANCE</p><h2 className="mt-1 text-[15px] font-semibold">Recent activity</h2></div><CircleAlert className="text-[#83978a]" size={16} /></div>
             <div className="max-h-[300px] divide-y divide-[#f0f2ef] overflow-y-auto">
@@ -223,8 +249,7 @@ export function AdminConsole({ email }: { email: string }) {
               {!loading && !audit.length && !verifications.length && <p className="px-4 py-8 text-center text-[10px] text-[#9aa49d]">No recorded activity yet.</p>}
             </div>
           </section>
-        </div>
-      </div>
+      </div>}
     </>
   );
 }
