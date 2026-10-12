@@ -14,12 +14,14 @@ export async function StaffPage({
   const session = await getSession();
   if (!session) redirect("/login");
   if (session.role !== UserRole.STAFF && session.role !== UserRole.ADMIN) redirect("/");
-  const profile = await withRlsContext(session, (tx) =>
-    tx.staffProfile.findUnique({
-      where: { userId: session.userId },
-      select: { fullNameEncrypted: true, jobTitle: true, phoneEncrypted: true },
-    }),
-  );
+  const profile = section === "profile"
+    ? await withRlsContext(session, (tx) =>
+        tx.staffProfile.findUnique({
+          where: { userId: session.userId },
+          select: { fullNameEncrypted: true, jobTitle: true, phoneEncrypted: true },
+        }),
+      )
+    : null;
   const staffProfile = profile
     ? {
         fullName: decrypt(profile.fullNameEncrypted),
