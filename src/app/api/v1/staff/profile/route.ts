@@ -1,6 +1,6 @@
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
-import { ApiError, assertSameOrigin, errorResponse } from "@/lib/api";
+import { ApiError, assertSameOrigin, errorResponse, readJson } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { decrypt, encrypt } from "@/lib/crypto";
 import { withRlsContext } from "@/lib/rls";
@@ -40,7 +40,7 @@ export async function PATCH(request: Request) {
       throw new ApiError(403, "Staff access required.");
     }
 
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(await readJson(request));
     if (!parsed.success) throw new ApiError(400, "Check the name, job title, and contact number.");
     const profile = parsed.data;
 

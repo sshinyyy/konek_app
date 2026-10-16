@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { ApiError, assertSameOrigin, errorResponse } from "@/lib/api";
+import { ApiError, assertSameOrigin, errorResponse, readJson } from "@/lib/api";
 import { getSession, isStaff } from "@/lib/auth";
 import { decrypt, sha256 } from "@/lib/crypto";
 import { renderCertificate } from "@/lib/document";
@@ -23,7 +23,7 @@ export async function PATCH(
     const session = await getSession();
     if (!session) throw new ApiError(401, "Authentication required.");
     if (!isStaff(session)) throw new ApiError(403, "Staff access required.");
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(await readJson(request));
     if (!parsed.success) throw new ApiError(400, "Choose an action and provide the required review remarks.");
     const { id } = await context.params;
 

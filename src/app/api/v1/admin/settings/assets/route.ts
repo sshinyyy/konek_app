@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { UserRole } from "@prisma/client";
 import { z } from "zod";
-import { ApiError, assertSameOrigin, errorResponse } from "@/lib/api";
+import { ApiError, assertSameOrigin, errorResponse, readJson } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { createUploadUrl } from "@/lib/storage";
 
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const session = await getSession();
     if (session?.role !== UserRole.ADMIN) throw new ApiError(403, "System administrator access required.");
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(await readJson(request));
     if (!parsed.success) throw new ApiError(400, "Choose a PNG certificate image up to 2 MB.");
     const objectKey = `settings/${parsed.data.type}/${randomUUID()}.png`;
     const uploadUrl = await createUploadUrl(objectKey, parsed.data.mimeType, parsed.data.sizeBytes);

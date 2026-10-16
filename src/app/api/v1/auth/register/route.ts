@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { assertSameOrigin, ApiError, errorResponse } from "@/lib/api";
+import { assertSameOrigin, ApiError, errorResponse, readJson } from "@/lib/api";
 import { createSessionToken, SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const limited = await rateLimitResponse(request, "register");
     if (limited) return limited;
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(await readJson(request));
     if (!parsed.success) throw new ApiError(400, "Please check your registration details.");
     const input = parsed.data;
     const email = input.email.trim().toLowerCase();

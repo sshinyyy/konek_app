@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { ApiError, assertSameOrigin, errorResponse } from "@/lib/api";
+import { ApiError, assertSameOrigin, errorResponse, readJson } from "@/lib/api";
 import { getSession } from "@/lib/auth";
+import { UserRole } from "@prisma/client";
 import { decrypt, encrypt } from "@/lib/crypto";
 import { withRlsContext } from "@/lib/rls";
 
@@ -16,6 +17,7 @@ export async function GET() {
   try {
     const session = await getSession();
     if (!session) throw new ApiError(401, "Authentication required.");
+    if (session.role !== UserRole.RESIDENT) throw new ApiError(403, "Resident access required.");
     const profile = await withRlsContext(session, (tx) =>
       tx.residentProfile.findUnique({ where: { userId: session.userId } }),
     );
@@ -37,7 +39,8 @@ export async function PATCH(request: Request) {
     assertSameOrigin(request);
     const session = await getSession();
     if (!session) throw new ApiError(401, "Authentication required.");
-    const parsed = schema.safeParse(await request.json());
+    if (session.role !== UserRole.RESIDENT) throw new ApiError(403, "Resident access required.");
+    const parsed = schema.safeParse(await readJson(request));
     if (!parsed.success) throw new ApiError(400, "Please check your profile details.");
     const value = parsed.data;
     const profile = await withRlsContext(session, (tx) =>

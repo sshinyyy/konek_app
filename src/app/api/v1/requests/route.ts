@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { DocumentType } from "@prisma/client";
 import { z } from "zod";
-import { ApiError, assertSameOrigin, errorResponse } from "@/lib/api";
+import { ApiError, assertSameOrigin, errorResponse, readJson } from "@/lib/api";
 import { getSession, isStaff } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
 import { withRlsContext } from "@/lib/rls";
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     const session = await getSession();
     if (!session) throw new ApiError(401, "Authentication required.");
     if (session.role !== "RESIDENT") throw new ApiError(403, "Only residents can submit requests.");
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(await readJson(request));
     if (!parsed.success) throw new ApiError(400, "Please provide a document type and purpose.");
     const created = await withRlsContext(session, async (tx) => {
       const result = await tx.documentRequest.create({

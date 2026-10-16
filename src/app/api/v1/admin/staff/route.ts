@@ -1,7 +1,7 @@
 import { Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { ApiError, assertSameOrigin, errorResponse } from "@/lib/api";
+import { ApiError, assertSameOrigin, errorResponse, readJson } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { withRlsContext } from "@/lib/rls";
 
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const session = await getSession();
     if (session?.role !== UserRole.ADMIN) throw new ApiError(403, "System administrator access required.");
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(await readJson(request));
     if (!parsed.success) throw new ApiError(400, "Enter a valid email and a 12-character password with a number.");
     const email = parsed.data.email.trim().toLowerCase();
     const passwordHash = await bcrypt.hash(parsed.data.password, 12);

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { ApiError, assertSameOrigin, errorResponse } from "@/lib/api";
+import { ApiError, assertSameOrigin, errorResponse, readJson } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { fileExtensionForMime, MAX_SUPPORTING_FILE_BYTES } from "@/lib/file-safety";
 import { withRlsContext } from "@/lib/rls";
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     if (session.role !== "RESIDENT") throw new ApiError(403, "Only residents can upload requirements.");
     const limited = await rateLimitResponse(request, "upload", session.userId);
     if (limited) return limited;
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(await readJson(request));
     if (!parsed.success) throw new ApiError(400, "The file type or size is not allowed.");
     const input = parsed.data;
     const result = await withRlsContext(session, async (tx) => {

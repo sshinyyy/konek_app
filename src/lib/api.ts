@@ -25,11 +25,21 @@ export function errorResponse(error: unknown): NextResponse {
   return NextResponse.json({ error: "An unexpected server error occurred." }, { status: 500 });
 }
 
+export async function readJson(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    throw new ApiError(400, "A valid JSON request body is required.");
+  }
+}
+
 export function assertSameOrigin(request: Request): void {
   const origin = request.headers.get("origin");
   if (!origin) return;
-  const requestOrigin = new URL(request.url).origin;
-  if (new URL(origin).origin !== requestOrigin) {
+  try {
+    if (new URL(origin).origin === new URL(request.url).origin) return;
+  } catch {
     throw new ApiError(403, "Cross-origin requests are not permitted.");
   }
+  throw new ApiError(403, "Cross-origin requests are not permitted.");
 }

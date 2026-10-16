@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { assertSameOrigin, ApiError, errorResponse } from "@/lib/api";
+import { assertSameOrigin, ApiError, errorResponse, readJson } from "@/lib/api";
 import { createSessionToken, SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/auth";
 import { withRlsContext } from "@/lib/rls";
 import { rateLimitResponse } from "@/lib/rate-limit";
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     const limited = await rateLimitResponse(request, "login");
     if (limited) return limited;
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(await readJson(request));
     if (!parsed.success) throw new ApiError(400, "Enter a valid email and password.");
     const email = parsed.data.email.trim().toLowerCase();
     const user = await withRlsContext(
