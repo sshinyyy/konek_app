@@ -131,7 +131,7 @@ export function StaffDashboard({
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div><p className="eyebrow">{section === "dashboard" ? "REQUEST PROCESSING" : "STAFF WORKSPACE"}</p><h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] sm:text-[34px]">{section === "dashboard" ? hasDisplayName ? `Good day, ${staffName.split(" ")[0]}.` : "Request queue" : "Your staff profile"}</h1><p className="mt-1.5 text-[13px] text-[#7d8981]">{section === "dashboard" ? "Review resident requests and issue verified documents." : "Manage the staff details shown in your workspace."}</p></div>
-        {section === "dashboard" && <button className="button-secondary" onClick={() => { setLoading(true); void refresh(); }} type="button"><RefreshCw size={14} /> Refresh queue</button>}
+        {section === "dashboard" && <button aria-busy={loading} className="button-secondary" disabled={loading || busy} onClick={() => { setLoading(true); void refresh(); }} type="button"><RefreshCw className={loading ? "animate-spin" : ""} size={14} /> Refresh queue</button>}
       </div>
 
       {section === "dashboard" && <div className="mt-7 grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -182,7 +182,7 @@ export function StaffDashboard({
           {loading ? <div className="flex justify-center py-12"><LoaderCircle className="animate-spin text-[#83958a]" size={17} /></div>
             : visible.length === 0 ? <div className="px-5 py-12 text-center"><span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#f0f4ef] text-[#799481]"><Files size={18} /></span><p className="mt-3 text-[12px] font-semibold text-[#526057]">No matching requests</p><p className="mt-1 text-[10px] text-[#9ba49e]">Try another filter or check back later.</p></div>
               : <div className="max-h-[610px] divide-y divide-[#edf0ed] overflow-y-auto">
-                {visible.map((row) => <button className={`flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[#fafbf9] ${selected?.id === row.id ? "bg-[#f5f8f4]" : ""}`} key={row.id} onClick={() => { setSelected(row); setRemarks(""); }} type="button">
+                {visible.map((row) => <button aria-pressed={selected?.id === row.id} className={`flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[#fafbf9] ${selected?.id === row.id ? "bg-[#f5f8f4]" : ""}`} key={row.id} onClick={() => { setSelected(row); setRemarks(""); }} type="button">
                   <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#eff4ef] text-[#638470]"><Files size={15} /></span>
                   <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-1.5"><span className="truncate text-[11px] font-semibold text-[#35463b]">{row.resident?.fullName ?? "Resident"}</span><span className={`rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase ${badge[row.status]}`}>{row.status.replaceAll("_", " ")}</span></span><span className="mt-1 block truncate text-[10px] text-[#89938c]">{titles[row.type] ?? row.type} · {row.referenceNo}</span><span className="mt-1 block text-[9px] text-[#a1aaa3]">{new Date(row.submittedAt).toLocaleDateString("en-PH")}</span></span><ArrowRight className="mt-2 shrink-0 text-[#a5afa8]" size={14} />
                 </button>)}
@@ -213,9 +213,9 @@ export function StaffDashboard({
               {["PENDING", "IN_REVIEW"].includes(selected.status) && <>
                 <label className="block text-[10px] font-semibold text-[#68756d]">Review note <span className="font-normal text-[#9aa49d]">(required if declining)</span><textarea className="field mt-1.5 min-h-[66px] resize-y text-[11px]" onChange={(event) => setRemarks(event.target.value)} placeholder="Add a note for the resident…" value={remarks} /></label>
                 <div className="grid grid-cols-2 gap-2">
-                  {selected.status === "PENDING" && <button className="button-secondary min-h-[36px] text-[10px]" disabled={busy} onClick={() => void process("review")} type="button"><Search size={13} /> Start review</button>}
-                  <button className="button-secondary min-h-[36px] border-[#efdbd6] text-[10px] text-[#a45442] hover:bg-[#fff8f6]" disabled={busy || remarks.trim().length < 3} onClick={() => void process("reject")} type="button"><X size={13} /> Decline</button>
-                  <button className="button-primary col-span-2 min-h-[37px] text-[10px]" disabled={busy} onClick={() => void process("issue")} type="button">{busy ? <LoaderCircle className="animate-spin" size={14} /> : <ShieldCheck size={14} />} Approve & issue with QR</button>
+                  {selected.status === "PENDING" && <button aria-busy={busy} className="button-secondary min-h-[36px] text-[10px]" disabled={busy} onClick={() => void process("review")} type="button">{busy ? <LoaderCircle className="animate-spin" size={13} /> : <Search size={13} />} Start review</button>}
+                  <button className="button-danger min-h-[36px] text-[10px]" disabled={busy || remarks.trim().length < 3} onClick={() => void process("reject")} type="button"><X size={13} /> Decline</button>
+                  <button aria-busy={busy} className="button-primary col-span-2 min-h-[37px] text-[10px]" disabled={busy} onClick={() => void process("issue")} type="button">{busy ? <LoaderCircle className="animate-spin" size={14} /> : <ShieldCheck size={14} />} Approve & issue with QR</button>
                 </div>
               </>}
               {selected.status === "ISSUED" && <div className="flex items-center gap-2 rounded-lg bg-[#eff7ef] p-3 text-[10px] text-[#42764f]"><FileCheck2 size={15} /> Digitally verifiable certificate issued.</div>}

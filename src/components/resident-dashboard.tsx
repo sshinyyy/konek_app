@@ -174,7 +174,7 @@ export function ResidentDashboard({
         <section className="card mt-7 p-5 sm:p-6">
           <div className="flex items-start justify-between">
             <div><p className="eyebrow">NEW APPLICATION</p><h2 className="mt-1 text-[19px] font-semibold tracking-tight">Request a document</h2></div>
-            <button aria-label="Close request form" className="text-[22px] leading-none text-[#9aa49e]" onClick={() => setShowForm(false)} type="button">×</button>
+            <button aria-label="Close request form" className="button-icon flex h-9 w-9 items-center justify-center text-[22px] leading-none text-[#9aa49e]" onClick={() => setShowForm(false)} type="button">×</button>
           </div>
           <form className="mt-5 space-y-4" onSubmit={submitRequest}>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -199,7 +199,7 @@ export function ResidentDashboard({
             </label>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf0ed] pt-4">
               <p className="max-w-[510px] text-[11px] leading-5 text-[#8a958e]">By submitting, you confirm that the information is accurate and consent to its use for processing this request.</p>
-              <button className="button-primary" disabled={submitting} type="submit">{submitting ? <><LoaderCircle className="animate-spin" size={15} /> Submitting…</> : <>Submit request <ArrowRight size={15} /></>}</button>
+              <button aria-busy={submitting} className="button-primary" disabled={submitting} type="submit">{submitting ? <><LoaderCircle className="animate-spin" size={15} /> Submitting…</> : <>Submit request <ArrowRight size={15} /></>}</button>
             </div>
           </form>
         </section>
@@ -213,7 +213,7 @@ export function ResidentDashboard({
           <div><p className="eyebrow">YOUR ACTIVITY</p><h2 className="mt-1 text-[19px] font-semibold tracking-tight">{section === "overview" ? "Recent requests" : "All requests"}</h2></div>
           <div className="flex items-center gap-2">
             {section === "overview" && <Link className="button-secondary min-h-[35px] text-[11px]" href="/requests">View all <ArrowRight size={13} /></Link>}
-            <button className="button-secondary min-h-[35px] text-[11px]" onClick={() => { setLoading(true); void loadRequests(); }} type="button"><RefreshCw size={13} /> Refresh</button>
+            <button aria-busy={loading} className="button-secondary min-h-[35px] text-[11px]" disabled={loading || submitting} onClick={() => { setLoading(true); void loadRequests(); }} type="button"><RefreshCw className={loading ? "animate-spin" : ""} size={13} /> Refresh</button>
           </div>
         </div>
         <div className="card overflow-hidden">

@@ -66,7 +66,7 @@ export function ProfileForm({ email }: { email: string }) {
             </div>
             {error && <p aria-live="polite" className="rounded-lg bg-[#fff5f2] px-3 py-2.5 text-[12px] text-[#a14d3d]">{error}</p>}
             {message && <p aria-live="polite" className="flex items-center gap-2 rounded-lg bg-[#eff7ef] px-3 py-2.5 text-[12px] text-[#42764f]"><Check size={14} />{message}</p>}
-            <div className="flex justify-end border-t border-[#edf0ed] pt-4"><button className="button-primary" disabled={busy} type="submit">{busy ? <LoaderCircle className="animate-spin" size={15} /> : <Save size={15} />} Save profile</button></div>
+            <div className="flex justify-end border-t border-[#edf0ed] pt-4"><button aria-busy={busy} className="button-primary" disabled={busy} type="submit">{busy ? <LoaderCircle className="animate-spin" size={15} /> : <Save size={15} />} Save profile</button></div>
           </form>
         )}
       </div>

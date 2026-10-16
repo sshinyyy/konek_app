@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Activity, BadgeCheck, Files, LayoutDashboard, LogOut, Menu, Settings2, ShieldCheck, UserRound, Users, X } from "lucide-react";
+import { Activity, BadgeCheck, Files, LayoutDashboard, LoaderCircle, LogOut, Menu, Settings2, ShieldCheck, UserRound, Users, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 type Props = {
@@ -16,6 +16,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [signOutError, setSignOutError] = useState("");
+  const [signingOut, setSigningOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const nav = role === "RESIDENT"
     ? [
@@ -62,6 +63,8 @@ export function AppShell({ role, email, fullName, children }: Props) {
   }, [mobileMenuOpen]);
 
   async function signOut() {
+    if (signingOut) return;
+    setSigningOut(true);
     setSignOutError("");
     try {
       const response = await fetch("/api/v1/auth/logout", { method: "POST" });
@@ -70,6 +73,8 @@ export function AppShell({ role, email, fullName, children }: Props) {
       router.refresh();
     } catch (error) {
       setSignOutError(error instanceof Error ? error.message : "Could not sign out. Please try again.");
+    } finally {
+      setSigningOut(false);
     }
   }
 
@@ -86,7 +91,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
             <span className="mt-0.5 block text-[10px] tracking-[.13em] text-[#88928c]">COMMUNITY SERVICES</span>
           </span>
         </Link>
-        <button aria-label="Close navigation menu" className="mobile-sidebar-close" onClick={() => setMobileMenuOpen(false)} type="button">
+        <button aria-label="Close navigation menu" className="button-icon mobile-sidebar-close" onClick={() => setMobileMenuOpen(false)} type="button">
           <X size={18} />
         </button>
         <p className="sidebar-label mb-2 px-3 text-[9px] font-bold tracking-[.12em] text-[#929d95]">WORKSPACE</p>
@@ -111,8 +116,8 @@ export function AppShell({ role, email, fullName, children }: Props) {
               <span className="block truncate text-[11px] text-[#8a948e]">{email}</span>
             </span>
           </div>
-          <button className="nav-link w-full cursor-pointer bg-transparent text-left" onClick={signOut} type="button">
-            <LogOut size={16} /><span>Sign out</span>
+          <button aria-busy={signingOut} className="nav-link w-full cursor-pointer bg-transparent text-left" disabled={signingOut} onClick={signOut} type="button">
+            {signingOut ? <LoaderCircle className="animate-spin" size={16} /> : <LogOut size={16} />}<span>{signingOut ? "Signing out…" : "Sign out"}</span>
           </button>
         </div>
       </aside>
@@ -123,7 +128,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
               aria-controls="workspace-navigation"
               aria-expanded={mobileMenuOpen}
               aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-              className="mobile-menu-toggle"
+              className="button-icon mobile-menu-toggle"
               onClick={() => setMobileMenuOpen((isOpen) => !isOpen)}
               type="button"
             >

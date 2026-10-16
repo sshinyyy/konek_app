@@ -85,7 +85,7 @@ export function VerificationPortal({
         </div>
         <form className="card mt-5 p-4 sm:p-5" onSubmit={(event) => { event.preventDefault(); void verify(input); }}>
           <label className="mb-2 block text-[11px] font-semibold text-[#4e5d53]" htmlFor="token">Verification link or code</label>
-          <div className="flex gap-2"><input autoComplete="off" className="field min-w-0" id="token" onChange={(event) => setInput(event.target.value)} placeholder="Paste the QR verification link" value={input} /><button aria-label="Verify document" className="button-primary shrink-0 px-3 sm:px-4" disabled={busy} type="submit">{busy ? <LoaderCircle className="animate-spin" size={15} /> : <Search size={15} />}<span className="hidden sm:inline">Verify</span></button></div>
+          <div className="flex gap-2"><input autoComplete="off" className="field min-w-0" id="token" onChange={(event) => setInput(event.target.value)} placeholder="Paste the QR verification link" value={input} /><button aria-busy={busy} aria-label="Verify document" className="button-primary shrink-0 px-3 sm:px-4" disabled={busy} type="submit">{busy ? <LoaderCircle className="animate-spin" size={15} /> : <Search size={15} />}<span className="hidden sm:inline">Verify</span></button></div>
           <p className="mt-2 text-[10px] leading-5 text-[#9aa49e]">This portal only displays public document details. Never share a verification link with anyone you do not trust.</p>
         </form>
 

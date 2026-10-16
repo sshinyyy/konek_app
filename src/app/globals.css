@@ -30,6 +30,10 @@ button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 ::selection { background: #d7e9dc; color: #123c2e; }
 :focus-visible { outline: 2px solid #5f9077; outline-offset: 2px; }
+.button-icon { border-radius: 8px; transition: background .15s ease, color .15s ease, transform .15s ease; }
+.button-icon:hover:not(:disabled) { background: #f0f5f0; color: var(--green); }
+.button-icon:active:not(:disabled) { transform: scale(.95); }
+.button-icon:focus-visible { outline: 2px solid #5f9077; outline-offset: 2px; }
 
 .app-shell {
   display: grid;
@@ -61,8 +65,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   padding: 0 36px;
   backdrop-filter: blur(16px);
 }
-.mobile-menu-toggle { display: none; }
-.mobile-sidebar-close { display: none; }
+.mobile-menu-toggle, .mobile-sidebar-close { display: none; }
 .content-wrap { width: min(1240px, 100%); margin: 0 auto; padding: 36px; }
 .nav-link {
   display: flex;
@@ -109,11 +112,12 @@ button, a { -webkit-tap-highlight-color: transparent; }
   background: var(--green);
   color: #fff;
   padding: 0 13px;
-  font-weight: 600;
-  transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+  font-weight: 650;
+  box-shadow: 0 1px 2px rgb(16 72 49 / 12%);
+  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease;
 }
-.button-primary:hover { background: var(--green-deep); box-shadow: 0 5px 14px rgb(16 72 49 / 16%); transform: translateY(-1px); }
-.button-primary:disabled { cursor: not-allowed; opacity: .65; transform: none; box-shadow: none; }
+.button-primary:hover:not(:disabled) { border-color: var(--green-deep); background: var(--green-deep); box-shadow: 0 4px 10px rgb(16 72 49 / 16%); transform: translateY(-1px); }
+.button-primary:active:not(:disabled) { transform: translateY(0) scale(.985); box-shadow: 0 1px 2px rgb(16 72 49 / 12%); }
 .button-secondary {
   display: inline-flex;
   min-height: 36px;
@@ -126,9 +130,44 @@ button, a { -webkit-tap-highlight-color: transparent; }
   color: #4e5e56;
   padding: 0 12px;
   font-weight: 600;
-  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+  box-shadow: 0 1px 2px rgb(31 52 39 / 4%);
+  transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease;
 }
-.button-secondary:hover { border-color: #b7c7ba; background: #fbfcfa; transform: translateY(-1px); }
+.button-secondary:hover:not(:disabled) { border-color: #b7c7ba; background: #f7faf6; color: #294d3a; box-shadow: 0 3px 8px rgb(31 52 39 / 8%); transform: translateY(-1px); }
+.button-secondary:active:not(:disabled) { transform: translateY(0) scale(.985); box-shadow: none; }
+.button-danger {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #efd8d2;
+  border-radius: 9px;
+  background: #fff;
+  color: #a45442;
+  padding: 0 12px;
+  font-weight: 600;
+  transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.button-danger:hover:not(:disabled) { border-color: #e6bdb3; background: #fff5f2; color: #8f4030; box-shadow: 0 3px 8px rgb(164 84 66 / 9%); transform: translateY(-1px); }
+.button-danger:active:not(:disabled) { transform: translateY(0) scale(.985); box-shadow: none; }
+.button-primary:focus-visible, .button-secondary:focus-visible, .button-danger:focus-visible {
+  outline: 3px solid rgb(95 144 119 / 42%);
+  outline-offset: 2px;
+}
+.button-primary:disabled, .button-secondary:disabled, .button-danger:disabled,
+button:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+  transform: none;
+  box-shadow: none;
+}
+button:not(:disabled) { cursor: pointer; }
+.button-primary svg, .button-secondary svg, .button-danger svg { flex: 0 0 auto; }
+.button-primary[aria-busy="true"], .button-secondary[aria-busy="true"], .button-danger[aria-busy="true"] { cursor: progress; }
+@media (prefers-reduced-motion: reduce) {
+  .button-primary, .button-secondary, .button-danger { transition: none; }
+}
 .eyebrow {
   color: #7c8780;
   font-size: 11px;

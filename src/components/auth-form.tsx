@@ -103,7 +103,7 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
                 <label className={labelClass}>Password
                   <span className="relative mt-1.5 block">
                     <input autoComplete={isRegister ? "new-password" : "current-password"} className={`${inputClass} pr-11`} onChange={(event) => update("password", event.target.value)} placeholder={isRegister ? "At least 12 characters" : "Enter your password"} required type={showPassword ? "text" : "password"} value={form.password} />
-                    <button aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-[#909a94]" onClick={() => setShowPassword(!showPassword)} type="button">
+                    <button aria-label={showPassword ? "Hide password" : "Show password"} className="button-icon absolute inset-y-0 right-0 flex w-10 items-center justify-center text-[#909a94]" onClick={() => setShowPassword(!showPassword)} type="button">
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </span>
@@ -112,7 +112,7 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
               </>
             )}
             {error && <p aria-live="polite" className="rounded-lg border border-[#f0d5d0] bg-[#fff6f4] px-3 py-2.5 text-[12px] text-[#a14d3d]">{error}</p>}
-            <Button className="mt-2 w-full" disabled={busy} type="submit">
+            <Button aria-busy={busy} className="mt-2 w-full" disabled={busy} type="submit">
               {busy ? "Please wait…" : isRegister && step === 1 ? <>Continue <ArrowRight size={15} /></> : isRegister ? <>Create account <Check size={15} /></> : <>Sign in <ArrowRight size={15} /></>}
             </Button>
             {isRegister && step === 2 && (
