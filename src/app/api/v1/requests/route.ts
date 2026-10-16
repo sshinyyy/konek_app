@@ -15,20 +15,67 @@ export async function GET() {
   try {
     const session = await getSession();
     if (!session) throw new ApiError(401, "Authentication required.");
-    const requests = await withRlsContext(session, (tx) =>
-      tx.documentRequest.findMany({
-        where: isStaff(session) ? undefined : { residentId: session.userId },
-        include: {
-          uploads: { select: { id: true, fileName: true, status: true, sizeBytes: true } },
-          document: { select: { referenceNo: true, issuedAt: true, validUntil: true } },
-          resident: { include: { profile: true } },
-        },
+    const requests = await withRlsContext(session, async (tx) => {
+      const include = {
+        uploads: { select: { id: true, fileName: true, status: true, sizeBytes: true } },
+        document: { select: { referenceNo: true, issuedAt: true, validUntil: true } },
+      };
+      if (isStaff(session)) {
+        const staffRequests = await tx.documentRequest.findMany({
+          include: {
+            ...include,
+            resident: {
+              select: {
+                id: true,
+                email: true,
+                profile: {
+                  select: {
+                    fullNameEncrypted: true,
+                    dateOfBirthEncrypted: true,
+                    addressEncrypted: true,
+                    phoneEncrypted: true,
+                    civilStatusEncrypted: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { submittedAt: "desc" },
+          take: 100,
+        });
+        return staffRequests.map((request) => ({
+          id: request.id,
+          referenceNo: request.referenceNo,
+          type: request.type,
+          status: request.status,
+          purpose: request.purpose,
+          remarks: request.remarks,
+          submittedAt: request.submittedAt,
+          uploads: request.uploads,
+          document: request.document,
+          ...(request.resident.profile
+            ? {
+                resident: {
+                  id: request.resident.id,
+                  email: request.resident.email,
+                  fullName: decrypt(request.resident.profile.fullNameEncrypted),
+                  dateOfBirth: decrypt(request.resident.profile.dateOfBirthEncrypted),
+                  address: decrypt(request.resident.profile.addressEncrypted),
+                  phone: decrypt(request.resident.profile.phoneEncrypted),
+                  civilStatus: decrypt(request.resident.profile.civilStatusEncrypted),
+                },
+              }
+            : {}),
+        }));
+      }
+
+      const residentRequests = await tx.documentRequest.findMany({
+        where: { residentId: session.userId },
+        include,
         orderBy: { submittedAt: "desc" },
         take: 100,
-      }),
-    );
-    return Response.json({
-      requests: requests.map((request) => ({
+      });
+      return residentRequests.map((request) => ({
         id: request.id,
         referenceNo: request.referenceNo,
         type: request.type,
@@ -38,21 +85,9 @@ export async function GET() {
         submittedAt: request.submittedAt,
         uploads: request.uploads,
         document: request.document,
-        ...(isStaff(session) && request.resident.profile
-          ? {
-              resident: {
-                id: request.resident.id,
-                email: request.resident.email,
-                fullName: decrypt(request.resident.profile.fullNameEncrypted),
-                dateOfBirth: decrypt(request.resident.profile.dateOfBirthEncrypted),
-                address: decrypt(request.resident.profile.addressEncrypted),
-                phone: decrypt(request.resident.profile.phoneEncrypted),
-                civilStatus: decrypt(request.resident.profile.civilStatusEncrypted),
-              },
-            }
-          : {}),
-      })),
+      }));
     });
+    return Response.json({ requests });
   } catch (error) {
     return errorResponse(error);
   }
