@@ -17,7 +17,7 @@ export async function GET() {
         tx.qRVerificationLog.findMany({
           take: 40,
           orderBy: { verifiedAt: "desc" },
-          select: { id: true, isAuthentic: true, tokenHash: true, verifiedAt: true },
+          select: { id: true, isAuthentic: true, verifiedAt: true },
         }),
         tx.auditLog.count({
           where: { actor: { is: { role: UserRole.ADMIN } } },

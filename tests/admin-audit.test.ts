@@ -66,6 +66,11 @@ describe("admin audit endpoint", () => {
       where: { id: { in: ["request-1"] } },
       select: { id: true, referenceNo: true },
     });
+    expect(mocks.findVerifications).toHaveBeenCalledWith({
+      take: 40,
+      orderBy: { verifiedAt: "desc" },
+      select: { id: true, isAuthentic: true, verifiedAt: true },
+    });
     expect(mocks.countAdminActions).toHaveBeenCalledWith({
       where: { actor: { is: { role: "ADMIN" } } },
     });
