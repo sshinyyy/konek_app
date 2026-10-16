@@ -16,7 +16,14 @@ type Settings = {
   sealObjectKey: string | null;
   signatureObjectKey: string | null;
 };
-type Audit = { id: string; action: string; entity: string; createdAt: string; actor: { email: string } | null };
+type Audit = {
+  id: string;
+  action: string;
+  entity: string;
+  createdAt: string;
+  actor: { email: string; role: string } | null;
+  target: { kind: string; label: string };
+};
 type Verification = { id: string; isAuthentic: boolean; tokenHash: string; verifiedAt: string };
 type AdminSection = "overview" | "staff" | "settings" | "activity";
 type AdminData = {
@@ -61,6 +68,19 @@ const emptySettings: Settings = {
   certificateValidityDays: 365, sealObjectKey: null, signatureObjectKey: null,
 };
 const label = "mb-1.5 block text-[11px] font-semibold text-[#536157]";
+const auditActionLabels: Record<string, string> = {
+  USER_LOGIN: "User signed in",
+  RESIDENT_REGISTERED: "Resident account registered",
+  DOCUMENT_REQUEST_SUBMITTED: "Document request submitted",
+  REQUEST_REVIEW_STARTED: "Request review started",
+  REQUEST_REJECTED: "Document request declined",
+  DOCUMENT_ISSUED: "Document issued",
+  STAFF_PROFILE_UPDATED: "Staff profile updated",
+  STAFF_ACCOUNT_CREATED: "Staff account created",
+  STAFF_ACCOUNT_ENABLED: "Staff account enabled",
+  STAFF_ACCOUNT_DISABLED: "Staff account disabled",
+  BARANGAY_SETTINGS_UPDATED: "Barangay certificate settings updated",
+};
 
 export function AdminConsole({
   email,
@@ -273,12 +293,26 @@ export function AdminConsole({
 
       {section === "activity" && <div className="mt-6 max-w-[900px]">
           <section className="card overflow-hidden">
-            <div className="flex items-center justify-between border-b border-[#edf0ed] p-4"><div><p className="eyebrow">SECURITY & COMPLIANCE</p><h2 className="mt-1 text-[15px] font-semibold">Recent activity</h2></div><CircleAlert className="text-[#83978a]" size={16} /></div>
+            <div className="flex items-center justify-between border-b border-[#edf0ed] p-4"><div><p className="eyebrow">SECURITY & COMPLIANCE</p><h2 className="mt-1 text-[15px] font-semibold">Recent activity</h2><p className="mt-1 text-[10px] text-[#87928a]">Actor, action, affected record, and event time</p></div><CircleAlert className="text-[#83978a]" size={16} /></div>
             <div className="max-h-[300px] divide-y divide-[#f0f2ef] overflow-y-auto">
-              {[...audit.map((item) => ({ id: item.id, label: item.action.replaceAll("_", " ").toLowerCase(), who: item.actor?.email ?? "System", date: item.createdAt, valid: true })),
-                ...verifications.map((item) => ({ id: item.id, label: item.isAuthentic ? "document verified" : "invalid scan", who: `Token …${item.tokenHash.slice(-6)}`, date: item.verifiedAt, valid: item.isAuthentic }))]
+              {[...audit.map((item) => ({
+                id: `audit-${item.id}`,
+                label: auditActionLabels[item.action] ?? item.action.replaceAll("_", " ").toLowerCase(),
+                actor: item.actor ? `${item.actor.email} · ${item.actor.role.toLowerCase()}` : "System",
+                detail: `${item.target.kind.replaceAll("_", " ").toLowerCase()}: ${item.target.label}`,
+                date: item.createdAt,
+                valid: true,
+              })),
+                ...verifications.map((item) => ({
+                  id: `verification-${item.id}`,
+                  label: "Document verification scan",
+                  actor: "Public QR verification",
+                  detail: `Result: ${item.isAuthentic ? "authentic document" : "invalid or unrecognized document"}`,
+                  date: item.verifiedAt,
+                  valid: item.isAuthentic,
+                }))]
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 15)
-                .map((item) => <div className="flex items-start gap-2.5 px-4 py-3" key={item.id}><span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${item.valid ? "bg-[#70a47e]" : "bg-[#d18370]"}`} /><span className="min-w-0 flex-1"><span className="block text-[10px] font-medium capitalize text-[#536157]">{item.label}</span><span className="mt-1 block truncate text-[9px] text-[#939d96]">{item.who}</span></span><span className="shrink-0 text-[9px] text-[#a0aaa3]">{new Date(item.date).toLocaleDateString("en-PH")}</span></div>)}
+                .map((item) => <div className="flex items-start gap-2.5 px-4 py-3" key={item.id}><span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${item.valid ? "bg-[#70a47e]" : "bg-[#d18370]"}`} /><span className="min-w-0 flex-1"><span className="block text-[10px] font-semibold text-[#536157]">{item.label}</span><span className="mt-1 block break-words text-[9px] text-[#77847b]">{item.actor}</span><span className="mt-0.5 block break-words text-[9px] text-[#939d96]">{item.detail}</span></span><time className="shrink-0 text-right text-[9px] text-[#77847b]" dateTime={item.date} title={new Date(item.date).toLocaleString("en-PH", { dateStyle: "full", timeStyle: "medium" })}>{new Date(item.date).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}</time></div>)}
               {!loading && !audit.length && !verifications.length && <p className="px-4 py-8 text-center text-[10px] text-[#9aa49d]">No recorded activity yet.</p>}
             </div>
           </section>
