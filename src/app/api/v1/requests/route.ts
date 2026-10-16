@@ -5,21 +5,39 @@ import { ApiError, assertSameOrigin, errorResponse, readJson } from "@/lib/api";
 import { getSession, isStaff } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
 import { withRlsContext } from "@/lib/rls";
+import { parseRequestPage, REQUEST_PAGE_SIZE } from "@/lib/request-pagination";
 
 const schema = z.object({
   type: z.enum(["BARANGAY_CLEARANCE", "CERTIFICATE_OF_RESIDENCY", "BARANGAY_ID"]),
   purpose: z.string().trim().min(3).max(500),
 });
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getSession();
     if (!session) throw new ApiError(401, "Authentication required.");
+    const page = parseRequestPage(new URL(request.url).searchParams.get("page"));
+    const where = isStaff(session) ? undefined : { residentId: session.userId };
     const requests = await withRlsContext(session, async (tx) => {
       const include = {
         uploads: { select: { id: true, fileName: true, status: true, sizeBytes: true } },
         document: { select: { referenceNo: true, issuedAt: true, validUntil: true } },
       };
+      const pagination = {
+        orderBy: [{ submittedAt: "desc" as const }, { id: "desc" as const }],
+        skip: page * REQUEST_PAGE_SIZE,
+        take: REQUEST_PAGE_SIZE + 1,
+      };
+      const [statusCounts, totalCount] = await Promise.all([
+        tx.documentRequest.groupBy({
+          by: ["status"],
+          where,
+          _count: { _all: true },
+        }),
+        tx.documentRequest.count({ where }),
+      ]);
+      const counts = Object.fromEntries(
+        statusCounts.map(({ status, _count }) => [status, _count._all]),
+      );
       if (isStaff(session)) {
         const staffRequests = await tx.documentRequest.findMany({
           include: {
@@ -40,10 +58,48 @@ export async function GET() {
               },
             },
           },
-          orderBy: { submittedAt: "desc" },
-          take: 100,
+          ...pagination,
         });
-        return staffRequests.map((request) => ({
+        const hasMore = staffRequests.length > REQUEST_PAGE_SIZE;
+        return {
+          requests: staffRequests.slice(0, REQUEST_PAGE_SIZE).map((request) => ({
+            id: request.id,
+            referenceNo: request.referenceNo,
+            type: request.type,
+            status: request.status,
+            purpose: request.purpose,
+            remarks: request.remarks,
+            submittedAt: request.submittedAt,
+            uploads: request.uploads,
+            document: request.document,
+            ...(request.resident.profile
+              ? {
+                  resident: {
+                    id: request.resident.id,
+                    email: request.resident.email,
+                    fullName: decrypt(request.resident.profile.fullNameEncrypted),
+                    dateOfBirth: decrypt(request.resident.profile.dateOfBirthEncrypted),
+                    address: decrypt(request.resident.profile.addressEncrypted),
+                    phone: decrypt(request.resident.profile.phoneEncrypted),
+                    civilStatus: decrypt(request.resident.profile.civilStatusEncrypted),
+                  },
+                }
+              : {}),
+          })),
+          counts,
+          totalCount,
+          nextPage: hasMore ? page + 1 : null,
+        };
+      }
+
+      const residentRequests = await tx.documentRequest.findMany({
+        where,
+        include,
+        ...pagination,
+      });
+      const hasMore = residentRequests.length > REQUEST_PAGE_SIZE;
+      return {
+        requests: residentRequests.slice(0, REQUEST_PAGE_SIZE).map((request) => ({
           id: request.id,
           referenceNo: request.referenceNo,
           type: request.type,
@@ -53,41 +109,13 @@ export async function GET() {
           submittedAt: request.submittedAt,
           uploads: request.uploads,
           document: request.document,
-          ...(request.resident.profile
-            ? {
-                resident: {
-                  id: request.resident.id,
-                  email: request.resident.email,
-                  fullName: decrypt(request.resident.profile.fullNameEncrypted),
-                  dateOfBirth: decrypt(request.resident.profile.dateOfBirthEncrypted),
-                  address: decrypt(request.resident.profile.addressEncrypted),
-                  phone: decrypt(request.resident.profile.phoneEncrypted),
-                  civilStatus: decrypt(request.resident.profile.civilStatusEncrypted),
-                },
-              }
-            : {}),
-        }));
-      }
-
-      const residentRequests = await tx.documentRequest.findMany({
-        where: { residentId: session.userId },
-        include,
-        orderBy: { submittedAt: "desc" },
-        take: 100,
-      });
-      return residentRequests.map((request) => ({
-        id: request.id,
-        referenceNo: request.referenceNo,
-        type: request.type,
-        status: request.status,
-        purpose: request.purpose,
-        remarks: request.remarks,
-        submittedAt: request.submittedAt,
-        uploads: request.uploads,
-        document: request.document,
-      }));
+        })),
+        counts,
+        totalCount,
+        nextPage: hasMore ? page + 1 : null,
+      };
     });
-    return Response.json({ requests });
+    return Response.json(requests);
   } catch (error) {
     return errorResponse(error);
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowDownToLine, ArrowRight, Check, Clock3, FileCheck2, Files, LoaderCircle, RefreshCw, Search, ShieldCheck, UserRound, X } from "lucide-react";
 
 type Row = {
@@ -29,6 +29,12 @@ const badge: Record<Row["status"], string> = {
 };
 
 type StaffProfile = { fullName: string; jobTitle: string; phone: string };
+type RequestPage = {
+  requests: Row[];
+  counts: Record<string, number>;
+  totalCount: number;
+  nextPage: number | null;
+};
 
 export function StaffDashboard({
   staffName,
@@ -46,42 +52,83 @@ export function StaffDashboard({
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextPage, setNextPage] = useState<number | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const hasDisplayName = !staffName.includes("@");
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     try {
-      const response = await fetch("/api/v1/requests", { cache: "no-store" });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? "Requests could not be loaded.");
+      const response = await fetch("/api/v1/requests?page=0", { cache: "no-store" });
+      if (!response.ok) {
+        const body = await response.json() as { error?: string };
+        throw new Error(body.error ?? "Requests could not be loaded.");
+      }
+      const body = await response.json() as RequestPage;
       setRows(body.requests);
+      setNextPage(body.nextPage);
+      setTotalCount(body.totalCount);
+      setStatusCounts(body.counts);
       setSelected((previous) => previous ? body.requests.find((row: Row) => row.id === previous.id) ?? null : null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Requests could not be loaded.");
     } finally { setLoading(false); }
-  }
+  }, []);
+
   useEffect(() => {
     if (section === "profile") return;
-    void fetch("/api/v1/requests", { cache: "no-store" })
+    void fetch("/api/v1/requests?page=0", { cache: "no-store" })
       .then(async (response) => {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error ?? "Requests could not be loaded.");
-        return body.requests as Row[];
+        return body as RequestPage;
       })
-      .then(setRows)
+      .then((body) => {
+        setRows(body.requests);
+        setNextPage(body.nextPage);
+        setTotalCount(body.totalCount);
+        setStatusCounts(body.counts);
+      })
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Requests could not be loaded."))
       .finally(() => setLoading(false));
   }, [section]);
 
-  const counts = useMemo(() => ({
-    pending: rows.filter((row) => row.status === "PENDING").length,
-    review: rows.filter((row) => row.status === "IN_REVIEW").length,
-    issued: rows.filter((row) => row.status === "ISSUED").length,
-    rejected: rows.filter((row) => row.status === "REJECTED").length,
-  }), [rows]);
+  async function loadMore() {
+    if (nextPage === null || loadingMore) return;
+    setLoadingMore(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/v1/requests?page=${nextPage}`, { cache: "no-store" });
+      if (!response.ok) {
+        const body = await response.json() as { error?: string };
+        throw new Error(body.error ?? "More requests could not be loaded.");
+      }
+      const body = await response.json() as RequestPage;
+      setRows((current) => {
+        const existingIds = new Set(current.map((row) => row.id));
+        return [...current, ...body.requests.filter((row) => !existingIds.has(row.id))];
+      });
+      setNextPage(body.nextPage);
+      setTotalCount(body.totalCount);
+      setStatusCounts(body.counts);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "More requests could not be loaded.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  const counts = {
+    pending: statusCounts.PENDING ?? 0,
+    review: statusCounts.IN_REVIEW ?? 0,
+    issued: statusCounts.ISSUED ?? 0,
+    rejected: statusCounts.REJECTED ?? 0,
+  };
   const visible = rows.filter((row) => (filter === "ALL" || row.status === filter) &&
     (!search || `${row.referenceNo} ${row.resident?.fullName ?? ""} ${row.type}`.toLowerCase().includes(search.toLowerCase())));
 
@@ -187,6 +234,10 @@ export function StaffDashboard({
                   <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-1.5"><span className="truncate text-[11px] font-semibold text-[#35463b]">{row.resident?.fullName ?? "Resident"}</span><span className={`rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase ${badge[row.status]}`}>{row.status.replaceAll("_", " ")}</span></span><span className="mt-1 block truncate text-[10px] text-[#89938c]">{titles[row.type] ?? row.type} · {row.referenceNo}</span><span className="mt-1 block text-[9px] text-[#a1aaa3]">{new Date(row.submittedAt).toLocaleDateString("en-PH")}</span></span><ArrowRight className="mt-2 shrink-0 text-[#a5afa8]" size={14} />
                 </button>)}
               </div>}
+          {!loading && totalCount > 0 && <div className="flex items-center justify-between gap-2 border-t border-[#edf0ed] px-4 py-3">
+            <p className="text-[10px] text-[#89938c]">Showing {rows.length} of {totalCount}</p>
+            {nextPage !== null && <button aria-busy={loadingMore} className="button-secondary min-h-[32px] text-[10px]" disabled={loadingMore} onClick={() => void loadMore()} type="button">{loadingMore ? <LoaderCircle className="animate-spin" size={13} /> : null} Load more</button>}
+          </div>}
         </section>
 
         <section className="card overflow-hidden">

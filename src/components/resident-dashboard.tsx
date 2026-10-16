@@ -15,6 +15,12 @@ type ResidentRequest = {
   uploads: { id: string; fileName: string; status: string; sizeBytes: number }[];
   document: { referenceNo: string; issuedAt: string; validUntil: string | null } | null;
 };
+type RequestPage = {
+  requests: ResidentRequest[];
+  counts: Record<string, number>;
+  totalCount: number;
+  nextPage: number | null;
+};
 
 const documentNames: Record<string, string> = {
   BARANGAY_CLEARANCE: "Barangay clearance",
@@ -49,21 +55,35 @@ export function ResidentDashboard({
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(section === "requests");
   const [submitting, setSubmitting] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextPage, setNextPage] = useState<number | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const [type, setType] = useState("BARANGAY_CLEARANCE");
   const [purpose, setPurpose] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [notice, setNotice] = useState("");
   const requestLoad = useRef<Promise<void> | null>(null);
+  const nextPageRef = useRef<number | null | undefined>(undefined);
 
   const loadRequests = useCallback(() => {
     if (requestLoad.current) return requestLoad.current;
     const pending = (async () => {
       setError("");
       try {
-        const response = await fetch("/api/v1/requests", { cache: "no-store" });
+        const response = await fetch("/api/v1/requests?page=0", { cache: "no-store" });
         if (!response.ok) throw new Error(await getError(response));
-        const body = await response.json();
-        setRequests(body.requests);
+        const body = await response.json() as RequestPage;
+        setRequests((current) => {
+          const firstPageIds = new Set(body.requests.map((request) => request.id));
+          return [...body.requests, ...current.filter((request) => !firstPageIds.has(request.id))];
+        });
+        setTotalCount(body.totalCount);
+        setStatusCounts(body.counts);
+        if (nextPageRef.current === undefined) {
+          nextPageRef.current = body.nextPage;
+          setNextPage(body.nextPage);
+        }
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "Unable to load requests.");
       } finally {
@@ -76,6 +96,29 @@ export function ResidentDashboard({
     });
     return pending;
   }, []);
+
+  async function loadMoreRequests() {
+    if (nextPage === null || loadingMore) return;
+    setLoadingMore(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/v1/requests?page=${nextPage}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(await getError(response));
+      const body = await response.json() as RequestPage;
+      setRequests((current) => {
+        const existingIds = new Set(current.map((request) => request.id));
+        return [...current, ...body.requests.filter((request) => !existingIds.has(request.id))];
+      });
+      nextPageRef.current = body.nextPage;
+      setNextPage(body.nextPage);
+      setTotalCount(body.totalCount);
+      setStatusCounts(body.counts);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "More requests could not be loaded.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   useEffect(() => {
     void loadRequests();
@@ -133,8 +176,8 @@ export function ResidentDashboard({
     }
   }
 
-  const pendingCount = requests.filter((request) => ["PENDING", "IN_REVIEW"].includes(request.status)).length;
-  const issuedCount = requests.filter((request) => request.status === "ISSUED").length;
+  const pendingCount = (statusCounts.PENDING ?? 0) + (statusCounts.IN_REVIEW ?? 0);
+  const issuedCount = statusCounts.ISSUED ?? 0;
 
   return (
     <>
@@ -150,7 +193,7 @@ export function ResidentDashboard({
 
       <div className="mt-7 grid gap-3 sm:grid-cols-3">
         {[
-          { label: "Total requests", value: requests.length, icon: Files, accent: "text-[#477661]", note: "All-time submissions" },
+          { label: "Total requests", value: totalCount, icon: Files, accent: "text-[#477661]", note: "All-time submissions" },
           { label: "In progress", value: pendingCount, icon: Clock3, accent: "text-[#bc8936]", note: "Awaiting processing" },
           { label: "Documents issued", value: issuedCount, icon: FileCheck2, accent: "text-[#477661]", note: "Ready to download" },
         ].map(({ label, value, icon: Icon, accent, note }) => (
@@ -218,7 +261,7 @@ export function ResidentDashboard({
         </div>
         <div className="card overflow-hidden">
           {loading ? <div className="flex items-center justify-center gap-2 py-14 text-[12px] text-[#909b94]"><LoaderCircle className="animate-spin" size={16} />Loading your requests…</div>
-            : requests.length === 0 ? (
+            : totalCount === 0 ? (
               <div className="flex flex-col items-center px-5 py-12 text-center">
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#eff4ef] text-[#70937d]"><Files size={20} /></span>
                 <p className="mt-3 text-[14px] font-semibold text-[#36473d]">Your first request starts here.</p>
@@ -247,6 +290,10 @@ export function ResidentDashboard({
                 ))}
               </div>
             )}
+          {section === "requests" && !loading && totalCount > 0 && <div className="flex items-center justify-between gap-2 border-t border-[#edf0ed] px-4 py-3">
+            <p className="text-[10px] text-[#89938c]">Showing {requests.length} of {totalCount}</p>
+            {nextPage !== null && <button aria-busy={loadingMore} className="button-secondary min-h-[32px] text-[10px]" disabled={loadingMore} onClick={() => void loadMoreRequests()} type="button">{loadingMore ? <LoaderCircle className="animate-spin" size={13} /> : null} Load more</button>}
+          </div>}
         </div>
       </section>
       <p className="mt-5 flex items-center gap-1.5 text-[10px] text-[#a1aaa3]"><ShieldCheck size={12} /> Personal records are encrypted and only used to process your barangay services.</p>
