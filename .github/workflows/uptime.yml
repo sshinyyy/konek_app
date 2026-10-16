@@ -1,0 +1,22 @@
+name: Production uptime
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check-public-routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check production routes
+        env:
+          BASE_URL: https://konek-app-ten.vercel.app
+        run: |
+          for path in /login /privacy /verify; do
+            echo "Checking ${BASE_URL}${path}"
+            curl --fail --silent --show-error --location --max-time 20 --retry 2 --output /dev/null "${BASE_URL}${path}"
+          done
