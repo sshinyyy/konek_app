@@ -1,17 +1,9 @@
-import { z } from "zod";
 import { ApiError, assertSameOrigin, errorResponse, readJson } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { UserRole } from "@prisma/client";
 import { decrypt, encrypt } from "@/lib/crypto";
 import { withRlsContext } from "@/lib/rls";
-
-const schema = z.object({
-  fullName: z.string().trim().min(2).max(150),
-  dateOfBirth: z.iso.date(),
-  address: z.string().trim().min(6).max(300),
-  phone: z.string().trim().regex(/^\+?[0-9 ()-]{7,20}$/),
-  civilStatus: z.enum(["Single", "Married", "Widowed", "Separated"]),
-});
+import { residentProfileSchema } from "@/lib/resident-profile-schema";
 
 export async function GET() {
   try {
@@ -28,6 +20,7 @@ export async function GET() {
       address: decrypt(profile.addressEncrypted),
       phone: decrypt(profile.phoneEncrypted),
       civilStatus: decrypt(profile.civilStatusEncrypted),
+      gender: profile.genderEncrypted ? decrypt(profile.genderEncrypted) : "",
     });
   } catch (error) {
     return errorResponse(error);
@@ -40,7 +33,7 @@ export async function PATCH(request: Request) {
     const session = await getSession();
     if (!session) throw new ApiError(401, "Authentication required.");
     if (session.role !== UserRole.RESIDENT) throw new ApiError(403, "Resident access required.");
-    const parsed = schema.safeParse(await readJson(request));
+    const parsed = residentProfileSchema.safeParse(await readJson(request));
     if (!parsed.success) throw new ApiError(400, "Please check your profile details.");
     const value = parsed.data;
     const profile = await withRlsContext(session, (tx) =>
@@ -52,6 +45,7 @@ export async function PATCH(request: Request) {
           addressEncrypted: encrypt(value.address),
           phoneEncrypted: encrypt(value.phone),
           civilStatusEncrypted: encrypt(value.civilStatus),
+          genderEncrypted: encrypt(value.gender),
         },
         select: { updatedAt: true },
       }),

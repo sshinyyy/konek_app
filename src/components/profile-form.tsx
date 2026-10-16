@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Check, LoaderCircle, LockKeyhole, Save } from "lucide-react";
 
 const label = "mb-1.5 block text-[12px] font-semibold text-[#4d5b53]";
-const blank = { fullName: "", dateOfBirth: "", address: "", phone: "", civilStatus: "Single" };
+const blank = { fullName: "", dateOfBirth: "", address: "", phone: "", civilStatus: "Single", gender: "" };
 
 export function ProfileForm({ email }: { email: string }) {
   const [form, setForm] = useState(blank);
@@ -18,7 +18,8 @@ export function ProfileForm({ email }: { email: string }) {
       try {
         const response = await fetch("/api/v1/profile", { cache: "no-store" });
         if (!response.ok) throw new Error("Your profile could not be loaded.");
-        setForm(await response.json());
+        const profile = await response.json();
+        setForm({ ...profile, gender: profile.gender ?? "" });
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "Your profile could not be loaded.");
       } finally { setLoading(false); }
@@ -64,6 +65,7 @@ export function ProfileForm({ email }: { email: string }) {
               <label className={label}>Mobile number<input className="field mt-1.5" onChange={(event) => update("phone", event.target.value)} required value={form.phone} /></label>
               <label className={label}>Civil status<select className="field mt-1.5" onChange={(event) => update("civilStatus", event.target.value)} value={form.civilStatus}>{["Single", "Married", "Widowed", "Separated"].map((value) => <option key={value}>{value}</option>)}</select></label>
             </div>
+            <label className={label}>Gender<select className="field mt-1.5" onChange={(event) => update("gender", event.target.value)} required value={form.gender}><option disabled value="">Select gender</option>{["Male", "Female"].map((value) => <option key={value}>{value}</option>)}</select></label>
             {error && <p aria-live="polite" className="rounded-lg bg-[#fff5f2] px-3 py-2.5 text-[12px] text-[#a14d3d]">{error}</p>}
             {message && <p aria-live="polite" className="flex items-center gap-2 rounded-lg bg-[#eff7ef] px-3 py-2.5 text-[12px] text-[#42764f]"><Check size={14} />{message}</p>}
             <div className="flex justify-end border-t border-[#edf0ed] pt-4"><button aria-busy={busy} className="button-primary" disabled={busy} type="submit">{busy ? <LoaderCircle className="animate-spin" size={15} /> : <Save size={15} />} Save profile</button></div>
