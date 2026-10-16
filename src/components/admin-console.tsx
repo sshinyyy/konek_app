@@ -19,7 +19,13 @@ type Settings = {
 type Audit = { id: string; action: string; entity: string; createdAt: string; actor: { email: string } | null };
 type Verification = { id: string; isAuthentic: boolean; tokenHash: string; verifiedAt: string };
 type AdminSection = "overview" | "staff" | "settings" | "activity";
-type AdminData = { staff?: Staff[]; settings?: Settings; audit?: Audit[]; verifications?: Verification[] };
+type AdminData = {
+  staff?: Staff[];
+  settings?: Settings;
+  audit?: Audit[];
+  verifications?: Verification[];
+  adminActionCount?: number;
+};
 
 async function fetchAdminData(section: AdminSection, signal?: AbortSignal): Promise<AdminData> {
   const endpoints = section === "overview"
@@ -44,6 +50,7 @@ async function fetchAdminData(section: AdminSection, signal?: AbortSignal): Prom
     } else {
       data.audit = result.audit;
       data.verifications = result.verifications;
+      data.adminActionCount = result.adminActionCount;
     }
   }
   return data;
@@ -66,6 +73,7 @@ export function AdminConsole({
   const [settings, setSettings] = useState<Settings>(emptySettings);
   const [audit, setAudit] = useState<Audit[]>([]);
   const [verifications, setVerifications] = useState<Verification[]>([]);
+  const [adminActionCount, setAdminActionCount] = useState(0);
   const [staffEmail, setStaffEmail] = useState("");
   const [staffPassword, setStaffPassword] = useState("");
   const [loading, setLoading] = useState(true);
@@ -81,6 +89,7 @@ export function AdminConsole({
       if (data.settings) setSettings(data.settings);
       if (data.audit) setAudit(data.audit);
       if (data.verifications) setVerifications(data.verifications);
+      if (data.adminActionCount !== undefined) setAdminActionCount(data.adminActionCount);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The administration data could not be loaded.");
     } finally { setLoading(false); }
@@ -94,6 +103,7 @@ export function AdminConsole({
         if (data.settings) setSettings(data.settings);
         if (data.audit) setAudit(data.audit);
         if (data.verifications) setVerifications(data.verifications);
+        if (data.adminActionCount !== undefined) setAdminActionCount(data.adminActionCount);
       })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "The administration data could not be loaded.");
@@ -210,7 +220,7 @@ export function AdminConsole({
         {[
           { label: "Staff accounts", value: staff.length, icon: Users },
           { label: "Verification scans", value: verifications.length, icon: ShieldCheck },
-          { label: "Logged admin actions", value: audit.length, icon: Activity },
+          { label: "Logged admin actions", value: adminActionCount, icon: Activity },
         ].map(({ label: title, value, icon: Icon }) => <div className="card flex items-center gap-3 p-4" key={title}><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#eff4ef] text-[#60836e]"><Icon size={16} /></span><div><p className="text-[10px] text-[#87928a]">{title}</p><p className="mt-0.5 text-[21px] font-semibold text-[#304238]">{loading ? "—" : value}</p></div></div>)}
       </div>}
 

@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const session = await getSession();
     if (session?.role !== UserRole.ADMIN) throw new ApiError(403, "System administrator access required.");
-    const [audit, verifications] = await Promise.all([
+    const [audit, verifications, adminActionCount] = await Promise.all([
       withRlsContext(session, (tx) =>
         tx.auditLog.findMany({
           take: 40,
@@ -22,8 +22,13 @@ export async function GET() {
           select: { id: true, isAuthentic: true, tokenHash: true, verifiedAt: true },
         }),
       ),
+      withRlsContext(session, (tx) =>
+        tx.auditLog.count({
+          where: { actor: { is: { role: UserRole.ADMIN } } },
+        }),
+      ),
     ]);
-    return Response.json({ audit, verifications });
+    return Response.json({ audit, verifications, adminActionCount });
   } catch (error) {
     return errorResponse(error);
   }
