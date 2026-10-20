@@ -19,6 +19,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
   const [signOutError, setSignOutError] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const shellRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLElement>(null);
   const nav = role === "RESIDENT"
     ? [
@@ -68,7 +69,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
     const items = contentRef.current?.children;
     if (!items?.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const animation = animate(
+    const contentAnimation = animate(
       Array.from(items).filter((item): item is HTMLElement => item instanceof HTMLElement),
       {
         opacity: [0, 1],
@@ -80,9 +81,48 @@ export function AppShell({ role, email, fullName, children }: Props) {
     );
 
     return () => {
-      animation.revert();
+      contentAnimation.revert();
     };
   }, [pathname]);
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const animations = new WeakMap<SVGElement, ReturnType<typeof animate>>();
+    function animateControlIcon(target: EventTarget | null) {
+      if (!(target instanceof Element)) return;
+      const control = target.closest<HTMLElement>(".nav-link, .button-primary, .button-secondary, .button-danger, .button-icon");
+      if (!control || control.matches(":disabled, [aria-busy='true']")) return;
+
+      const icon = control.querySelector("svg");
+      if (!(icon instanceof SVGElement)) return;
+      animations.get(icon)?.revert();
+      animations.set(icon, animate(icon, {
+        rotate: [0, -8, 8, 0],
+        scale: [1, 1.1, 1],
+        duration: 360,
+        ease: "outCubic",
+      }));
+    }
+    function onPointerOver(event: PointerEvent) {
+      if (event.relatedTarget instanceof Node) {
+        const control = event.target instanceof Element ? event.target.closest(".nav-link, .button-primary, .button-secondary, .button-danger, .button-icon") : null;
+        if (control?.contains(event.relatedTarget)) return;
+      }
+      animateControlIcon(event.target);
+    }
+    function onFocusIn(event: FocusEvent) {
+      animateControlIcon(event.target);
+    }
+
+    shell.addEventListener("pointerover", onPointerOver);
+    shell.addEventListener("focusin", onFocusIn);
+    return () => {
+      shell.removeEventListener("pointerover", onPointerOver);
+      shell.removeEventListener("focusin", onFocusIn);
+    };
+  }, []);
 
   async function signOut() {
     if (signingOut) return;
@@ -101,7 +141,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" ref={shellRef}>
       {mobileMenuOpen && <button aria-label="Close navigation menu" className="mobile-nav-backdrop" onClick={() => setMobileMenuOpen(false)} type="button" />}
       <aside aria-label="Workspace navigation" className={`sidebar ${mobileMenuOpen ? "mobile-open" : ""}`} id="workspace-navigation">
         <Link className="sidebar-brand mb-7 flex items-center gap-3 px-2" href="/">
