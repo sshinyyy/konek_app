@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { animate, stagger } from "animejs";
 import { Activity, BadgeCheck, Files, LayoutDashboard, LoaderCircle, LogOut, Menu, Settings2, ShieldCheck, UserRound, Users, X } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 type Props = {
   role: "RESIDENT" | "STAFF" | "ADMIN";
@@ -18,6 +19,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
   const [signOutError, setSignOutError] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const contentRef = useRef<HTMLElement>(null);
   const nav = role === "RESIDENT"
     ? [
         { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -61,6 +63,26 @@ export function AppShell({ role, email, fullName, children }: Props) {
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    const items = contentRef.current?.children;
+    if (!items?.length || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const animation = animate(
+      Array.from(items).filter((item): item is HTMLElement => item instanceof HTMLElement),
+      {
+        opacity: [0, 1],
+        y: [12, 0],
+        delay: stagger(45),
+        duration: 420,
+        ease: "outCubic",
+      },
+    );
+
+    return () => {
+      animation.revert();
+    };
+  }, [pathname]);
 
   async function signOut() {
     if (signingOut) return;
@@ -142,7 +164,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
           </div>
         </header>
         {signOutError && <p aria-live="polite" className="mx-5 mt-3 rounded-md bg-[#fff5f2] px-3 py-2 text-[11px] text-[#a14d3d]">{signOutError}</p>}
-        <main className="content-wrap">{children}</main>
+        <main className="content-wrap" ref={contentRef}>{children}</main>
       </div>
     </div>
   );

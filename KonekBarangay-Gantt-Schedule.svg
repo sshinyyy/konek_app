@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="850" viewBox="0 0 1280 850" role="img" aria-labelledby="title description">
+  <title id="title">Konek Barangay system development Gantt schedule</title>
+  <desc id="description">An illustrative 31-week project schedule from October 19, 2026 through May 23, 2027, with planning, design, construction, and implementation phases lasting 1, 9, 10, and 11 weeks.</desc>
+  <defs>
+    <pattern id="grid" width="28" height="82" patternUnits="userSpaceOnUse">
+      <path d="M 28 0 L 28 82" fill="none" stroke="#e3e9e5" stroke-width="1"/>
+    </pattern>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; }
+      .muted { fill: #68776f; }
+      .week { fill: #758179; font-size: 10px; }
+      .phase-title { fill: #263b30; font-size: 15px; font-weight: 700; }
+      .phase-date { fill: #748078; font-size: 11px; }
+      .task-title { fill: #2e4538; font-size: 13px; font-weight: 700; }
+      .task-copy { fill: #69776f; font-size: 11px; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="850" fill="#f5f7f4"/>
+  <rect x="24" y="22" width="1232" height="806" rx="18" fill="#fff" stroke="#e4eae5"/>
+
+  <text x="56" y="66" fill="#1e3b2d" font-size="25" font-weight="700">Konek Barangay System Development</text>
+  <text x="56" y="92" class="muted" font-size="13">Illustrative Gantt schedule · 31 weeks · Proposed start: 19 October 2026</text>
+  <rect x="1018" y="47" width="205" height="34" rx="17" fill="#eef4ef"/>
+  <text x="1120" y="69" text-anchor="middle" fill="#35654b" font-size="12" font-weight="700">PROPOSED TIMELINE</text>
+
+  <text x="56" y="147" fill="#718078" font-size="11" font-weight="700" letter-spacing="1">PROJECT PHASE</text>
+  <text x="310" y="147" fill="#718078" font-size="11" font-weight="700" letter-spacing="1">SCHEDULE (WEEKS)</text>
+
+  <g>
+    <rect x="310" y="160" width="56" height="32" fill="#eef3ef"/>
+    <rect x="366" y="160" width="112" height="32" fill="#f7f9f7"/>
+    <rect x="478" y="160" width="140" height="32" fill="#eef3ef"/>
+    <rect x="618" y="160" width="112" height="32" fill="#f7f9f7"/>
+    <rect x="730" y="160" width="112" height="32" fill="#eef3ef"/>
+    <rect x="842" y="160" width="140" height="32" fill="#f7f9f7"/>
+    <rect x="982" y="160" width="112" height="32" fill="#eef3ef"/>
+    <rect x="1094" y="160" width="84" height="32" fill="#f7f9f7"/>
+    <g fill="#3b5145" font-size="12" font-weight="700" text-anchor="middle">
+      <text x="338" y="181">OCT 2026</text>
+      <text x="422" y="181">NOV</text>
+      <text x="548" y="181">DEC</text>
+      <text x="674" y="181">JAN 2027</text>
+      <text x="786" y="181">FEB</text>
+      <text x="912" y="181">MAR</text>
+      <text x="1038" y="181">APR</text>
+      <text x="1136" y="181">MAY</text>
+    </g>
+  </g>
+
+  <g text-anchor="middle" class="week">
+    <text x="324" y="209">1</text><text x="352" y="209">2</text>
+    <text x="380" y="209">3</text><text x="408" y="209">4</text><text x="436" y="209">5</text><text x="464" y="209">6</text>
+    <text x="492" y="209">7</text><text x="520" y="209">8</text><text x="548" y="209">9</text><text x="576" y="209">10</text><text x="604" y="209">11</text>
+    <text x="632" y="209">12</text><text x="660" y="209">13</text><text x="688" y="209">14</text><text x="716" y="209">15</text>
+    <text x="744" y="209">16</text><text x="772" y="209">17</text><text x="800" y="209">18</text><text x="828" y="209">19</text>
+    <text x="856" y="209">20</text><text x="884" y="209">21</text><text x="912" y="209">22</text><text x="940" y="209">23</text><text x="968" y="209">24</text>
+    <text x="996" y="209">25</text><text x="1024" y="209">26</text><text x="1052" y="209">27</text><text x="1080" y="209">28</text>
+    <text x="1108" y="209">29</text><text x="1136" y="209">30</text><text x="1164" y="209">31</text>
+  </g>
+
+  <g>
+    <rect x="310" y="218" width="868" height="82" fill="#fff"/>
+    <rect x="310" y="300" width="868" height="82" fill="#fbfcfb"/>
+    <rect x="310" y="382" width="868" height="82" fill="#fff"/>
+    <rect x="310" y="464" width="868" height="82" fill="#fbfcfb"/>
+    <rect x="310" y="218" width="868" height="328" fill="url(#grid)"/>
+    <path d="M310 218H1178 M310 300H1178 M310 382H1178 M310 464H1178 M310 546H1178" stroke="#e3e9e5" fill="none"/>
+    <path d="M310 160V546 M366 160V546 M478 160V546 M618 160V546 M730 160V546 M842 160V546 M982 160V546 M1094 160V546 M1178 160V546" stroke="#d9e1db" fill="none"/>
+  </g>
+
+  <g>
+    <text x="56" y="248" class="phase-title">Planning</text>
+    <text x="56" y="269" class="phase-date">Week 1 · Oct 19–25</text>
+    <rect x="310" y="240" width="28" height="38" rx="6" fill="#e8a33f"/>
+    <circle cx="338" cy="259" r="5" fill="#9c6420"/>
+    <text x="348" y="264" fill="#7b622f" font-size="11" font-weight="700">M1</text>
+
+    <text x="56" y="330" class="phase-title">Design</text>
+    <text x="56" y="351" class="phase-date">Weeks 2–10 · Oct 26–Dec 27</text>
+    <rect x="338" y="322" width="252" height="38" rx="6" fill="#737fc6"/>
+    <text x="354" y="346" fill="#fff" font-size="12" font-weight="700">DESIGN · 9 WEEKS</text>
+    <circle cx="590" cy="341" r="5" fill="#3d4d99"/>
+
+    <text x="56" y="412" class="phase-title">Construction</text>
+    <text x="56" y="433" class="phase-date">Weeks 11–20 · Dec 28–Mar 7</text>
+    <rect x="590" y="404" width="280" height="38" rx="6" fill="#18afd0"/>
+    <text x="607" y="428" fill="#073d4c" font-size="12" font-weight="700">BUILD &amp; TEST · 10 WEEKS</text>
+    <circle cx="870" cy="423" r="5" fill="#08758b"/>
+
+    <text x="56" y="494" class="phase-title">Implementation</text>
+    <text x="56" y="515" class="phase-date">Weeks 21–31 · Mar 8–May 23</text>
+    <rect x="870" y="486" width="308" height="38" rx="6" fill="#bd8acb"/>
+    <text x="887" y="510" fill="#442750" font-size="12" font-weight="700">PILOT &amp; GO-LIVE · 11 WEEKS</text>
+    <circle cx="1178" cy="505" r="5" fill="#784d88"/>
+  </g>
+
+  <text x="56" y="586" fill="#718078" font-size="11" font-weight="700" letter-spacing="1">PHASE SCOPE</text>
+  <g>
+    <rect x="56" y="606" width="565" height="83" rx="11" fill="#fff8ed" stroke="#f1dfc2"/>
+    <rect x="56" y="606" width="5" height="83" rx="2" fill="#e8a33f"/>
+    <text x="77" y="630" class="task-title">Planning · Define the work</text>
+    <text x="77" y="651" class="task-copy">Confirm barangay service needs, resident/staff/admin roles, scope,</text>
+    <text x="77" y="669" class="task-copy">privacy requirements, success criteria, and project risks.</text>
+
+    <rect x="641" y="606" width="583" height="83" rx="11" fill="#f3f4fb" stroke="#dfe2f3"/>
+    <rect x="641" y="606" width="5" height="83" rx="2" fill="#737fc6"/>
+    <text x="662" y="630" class="task-title">Design · Plan the experience and architecture</text>
+    <text x="662" y="651" class="task-copy">Map request and approval flows, role permissions, mobile UI, database,</text>
+    <text x="662" y="669" class="task-copy">security/privacy controls, document templates, and verification process.</text>
+
+    <rect x="56" y="701" width="565" height="83" rx="11" fill="#effafd" stroke="#ccecf3"/>
+    <rect x="56" y="701" width="5" height="83" rx="2" fill="#18afd0"/>
+    <text x="77" y="725" class="task-title">Construction · Build and verify</text>
+    <text x="77" y="746" class="task-copy">Implement accounts, profiles, document requests, secure uploads, staff</text>
+    <text x="77" y="764" class="task-copy">review/issuance, QR verification, admin tools, audit trail, and testing.</text>
+
+    <rect x="641" y="701" width="583" height="83" rx="11" fill="#faf3fb" stroke="#eadced"/>
+    <rect x="641" y="701" width="5" height="83" rx="2" fill="#bd8acb"/>
+    <text x="662" y="725" class="task-title">Implementation · Prepare and launch</text>
+    <text x="662" y="746" class="task-copy">Configure production, prepare initial data, train staff, pilot with users,</text>
+    <text x="662" y="764" class="task-copy">resolve feedback, launch, and monitor operations.</text>
+  </g>
+
+  <text x="56" y="810" fill="#89948d" font-size="10">Illustrative schedule only. Week ranges are consecutive; adjust the start date and durations to match approved project milestones.</text>
+</svg>
