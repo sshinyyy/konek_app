@@ -76,7 +76,11 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
               {isRegister ? (step === 1 ? "Let’s get you set up." : "A little about you.") : "Sign in to continue."}
             </h2>
             <p className="mt-2 text-[13px] leading-6 text-[#818b85]">
-              {isRegister ? "Access secure, convenient barangay services online." : "Manage your requests and documents in one place."}
+              {isRegister
+                ? step === 1
+                  ? "Access secure, convenient barangay services online."
+                  : "These details help verify your resident profile and prepare requested barangay documents. Provide accurate information and review the privacy notice below."
+                : "Manage your requests and documents in one place."}
             </p>
         </div>
         <form className="space-y-4" onSubmit={submit}>

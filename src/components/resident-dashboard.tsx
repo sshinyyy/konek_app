@@ -220,6 +220,10 @@ export function ResidentDashboard({
             <button aria-label="Close request form" className="button-icon flex h-9 w-9 items-center justify-center text-[22px] leading-none text-[#9aa49e]" onClick={() => setShowForm(false)} type="button">×</button>
           </div>
           <form className="mt-5 space-y-4" onSubmit={submitRequest}>
+            <p className="rounded-lg border border-[#dce8dc] bg-[#f7faf6] px-3.5 py-3 text-[11px] leading-5 text-[#64746a]">
+              Your request details and any files you attach are shared with authorized barangay staff to process this document request. Attach only documents needed for this request.{" "}
+              <Link className="font-semibold text-[#175b43] underline underline-offset-2" href="/privacy">Read the privacy notice</Link>.
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-[12px] font-semibold text-[#4d5b53]">Document type
                 <select className="field mt-1.5" onChange={(event) => setType(event.target.value)} value={type}>
@@ -229,19 +233,20 @@ export function ResidentDashboard({
                 </select>
               </label>
               <label className="text-[12px] font-semibold text-[#4d5b53]">Purpose of request
-                <input className="field mt-1.5" maxLength={500} onChange={(event) => setPurpose(event.target.value)} placeholder="e.g. Local employment requirement" required value={purpose} />
+                <input aria-describedby="request-purpose-help" className="field mt-1.5" maxLength={500} minLength={3} onChange={(event) => setPurpose(event.target.value)} placeholder="e.g. Local employment requirement" required value={purpose} />
+                <span className="mt-1 block text-[10px] font-normal text-[#8a958e]" id="request-purpose-help">Briefly state why you need this document (3–500 characters).</span>
               </label>
             </div>
             <label className="block text-[12px] font-semibold text-[#4d5b53]">Supporting documents <span className="font-normal text-[#99a29c]">(optional, PDF or image · max 10 MB each)</span>
               <span className="mt-1.5 flex min-h-[76px] cursor-pointer items-center gap-3 rounded-lg border border-dashed border-[#d9e2da] bg-[#fbfcfa] px-4 text-[#78867d] hover:border-[#9eb8a3]">
                 <UploadCloud size={18} className="shrink-0 text-[#6c947b]" />
                 <span className="flex-1 text-[12px]">{files.length ? files.map((file) => file.name).join(", ") : "Choose files to attach"}</span>
-                <input accept=".pdf,.jpg,.jpeg,.png,.webp" className="sr-only" multiple onChange={(event) => setFiles(Array.from(event.target.files ?? []))} type="file" />
+                <input accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="Choose supporting documents" className="sr-only" multiple onChange={(event) => setFiles(Array.from(event.target.files ?? []))} type="file" />
               </span>
               <span className="mt-2 block rounded-md border border-[#f0dfbd] bg-[#fff9ec] px-3 py-2 text-[10px] font-normal leading-4 text-[#896838]">Uploaded files are checked for type and size but are not malware-scanned. Only upload files you trust.</span>
             </label>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf0ed] pt-4">
-              <p className="max-w-[510px] text-[11px] leading-5 text-[#8a958e]">By submitting, you confirm that the information is accurate and consent to its use for processing this request.</p>
+              <p className="max-w-[510px] text-[11px] leading-5 text-[#8a958e]">By submitting, you confirm the request information is accurate and ask the barangay to process this document request.</p>
               <button aria-busy={submitting} className="button-primary" disabled={submitting} type="submit">{submitting ? <><LoaderCircle className="animate-spin" size={15} /> Submitting…</> : <>Submit request <ArrowRight size={15} /></>}</button>
             </div>
           </form>
