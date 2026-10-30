@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Suspense, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { readJsonResponse } from "@/lib/client-response";
 
 const inputClass = "field";
 const labelClass = "mb-1.5 block text-[12px] font-semibold text-[#4d5b53]";
@@ -49,7 +50,7 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(isRegister ? { ...form, privacyAcknowledged } : { email: form.email, password: form.password }),
       });
-      const result = await response.json();
+      const result = await readJsonResponse<{ role?: string; error?: string }>(response, "We could not complete that request. Please try again.");
       if (!response.ok) throw new Error(result.error ?? "We could not complete that request.");
       const destination = result.role === "ADMIN" ? "/admin"
         : result.role === "STAFF" ? "/staff"

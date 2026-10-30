@@ -21,6 +21,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const nav = role === "RESIDENT"
     ? [
         { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -58,12 +59,40 @@ export function AppShell({ role, email, fullName, children }: Props) {
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setMobileMenuOpen(false);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    shellRef.current?.querySelector<HTMLElement>("#workspace-navigation a[href]")?.focus();
+    function handleNavigationKeydown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMobileMenuOpen(false);
+        mobileMenuButtonRef.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const sidebar = shellRef.current?.querySelector<HTMLElement>("#workspace-navigation");
+      const focusable = sidebar?.querySelectorAll<HTMLElement>("a[href], button:not(:disabled)");
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    window.addEventListener("keydown", handleNavigationKeydown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleNavigationKeydown);
+    };
   }, [mobileMenuOpen]);
+
+  function closeMobileMenu() {
+    setMobileMenuOpen(false);
+    mobileMenuButtonRef.current?.focus();
+  }
 
   useEffect(() => {
     const items = contentRef.current?.children;
@@ -142,7 +171,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
 
   return (
     <div className="app-shell" ref={shellRef}>
-      {mobileMenuOpen && <button aria-label="Close navigation menu" className="mobile-nav-backdrop" onClick={() => setMobileMenuOpen(false)} type="button" />}
+      {mobileMenuOpen && <button aria-label="Close navigation menu" className="mobile-nav-backdrop" onClick={closeMobileMenu} type="button" />}
       <aside aria-label="Workspace navigation" className={`sidebar ${mobileMenuOpen ? "mobile-open" : ""}`} id="workspace-navigation">
         <Link className="sidebar-brand mb-7 flex items-center gap-3 px-2" href="/">
           <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#145b43] text-white">
@@ -153,7 +182,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
             <span className="mt-0.5 block text-[10px] tracking-[.13em] text-[#88928c]">COMMUNITY SERVICES</span>
           </span>
         </Link>
-        <button aria-label="Close navigation menu" className="button-icon mobile-sidebar-close" onClick={() => setMobileMenuOpen(false)} type="button">
+        <button aria-label="Close navigation menu" className="button-icon mobile-sidebar-close" onClick={closeMobileMenu} type="button">
           <X size={18} />
         </button>
         <p className="sidebar-label mb-2 px-3 text-[9px] font-bold tracking-[.12em] text-[#929d95]">WORKSPACE</p>
@@ -192,6 +221,7 @@ export function AppShell({ role, email, fullName, children }: Props) {
               aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
               className="button-icon mobile-menu-toggle"
               onClick={() => setMobileMenuOpen((isOpen) => !isOpen)}
+              ref={mobileMenuButtonRef}
               type="button"
             >
               {mobileMenuOpen ? <X size={19} /> : <Menu size={19} />}

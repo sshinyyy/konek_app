@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDownToLine, ArrowRight, ArrowUpRight, CalendarDays, Check, Clock3, FileCheck2, FilePlus2, Files, LoaderCircle, RefreshCw, ShieldCheck, UploadCloud } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, ArrowUpRight, CalendarDays, Check, Clock3, FileCheck2, FilePlus2, Files, LoaderCircle, RefreshCw, ShieldCheck, UploadCloud, X } from "lucide-react";
+import { getResidentRequestNextStep, requestStatusLabels } from "@/lib/request-presentation";
+import { readJsonResponse } from "@/lib/client-response";
+import { getSupportingFileIssue, getSupportingFileMimeType } from "@/lib/supporting-file-validation";
 
 type ResidentRequest = {
   id: string;
@@ -20,6 +23,7 @@ type RequestPage = {
   counts: Record<string, number>;
   totalCount: number;
   nextPage: number | null;
+  error?: string;
 };
 
 const documentNames: Record<string, string> = {
@@ -37,7 +41,7 @@ const statusStyles: Record<ResidentRequest["status"], string> = {
 };
 
 async function getError(response: Response) {
-  const result = await response.json();
+  const result = await readJsonResponse<{ error?: string }>(response, "The request could not be completed.");
   return result.error ?? "The request could not be completed.";
 }
 
@@ -73,7 +77,7 @@ export function ResidentDashboard({
       try {
         const response = await fetch("/api/v1/requests?page=0", { cache: "no-store" });
         if (!response.ok) throw new Error(await getError(response));
-        const body = await response.json() as RequestPage;
+        const body = await readJsonResponse<RequestPage>(response, "Unable to load requests.");
         setRequests((current) => {
           const firstPageIds = new Set(body.requests.map((request) => request.id));
           return [...body.requests, ...current.filter((request) => !firstPageIds.has(request.id))];
@@ -104,7 +108,7 @@ export function ResidentDashboard({
     try {
       const response = await fetch(`/api/v1/requests?page=${nextPage}`, { cache: "no-store" });
       if (!response.ok) throw new Error(await getError(response));
-      const body = await response.json() as RequestPage;
+      const body = await readJsonResponse<RequestPage>(response, "More requests could not be loaded.");
       setRequests((current) => {
         const existingIds = new Set(current.map((request) => request.id));
         return [...current, ...body.requests.filter((request) => !existingIds.has(request.id))];
@@ -130,9 +134,15 @@ export function ResidentDashboard({
 
   async function submitRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const invalidFile = files.find((file) => getSupportingFileIssue(file));
+    if (invalidFile) {
+      setError(`${invalidFile.name}: ${getSupportingFileIssue(invalidFile)}`);
+      return;
+    }
     setSubmitting(true);
     setError("");
     setNotice("");
+    let createdReferenceNo: string | null = null;
     try {
       const response = await fetch("/api/v1/requests", {
         method: "POST",
@@ -140,23 +150,26 @@ export function ResidentDashboard({
         body: JSON.stringify({ type, purpose }),
       });
       if (!response.ok) throw new Error(await getError(response));
-      const created = await response.json();
+      const created = await readJsonResponse<{ id: string; referenceNo: string }>(response, "The request could not be submitted.");
+      createdReferenceNo = created.referenceNo;
       for (const file of files) {
+        const mimeType = getSupportingFileMimeType(file);
+        if (!mimeType) throw new Error(`${file.name}: Choose a PDF, JPG, PNG, or WebP file.`);
         const signedResponse = await fetch("/api/v1/uploads", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             requestId: created.id,
             fileName: file.name,
-            mimeType: file.type,
+            mimeType,
             sizeBytes: file.size,
           }),
         });
         if (!signedResponse.ok) throw new Error(await getError(signedResponse));
-        const signed = await signedResponse.json();
+        const signed = await readJsonResponse<{ id: string; uploadUrl: string }>(signedResponse, `Could not prepare ${file.name} for upload.`);
         const uploadResponse = await fetch(signed.uploadUrl, {
           method: "PUT",
-          headers: { "Content-Type": file.type },
+          headers: { "Content-Type": mimeType },
           body: file,
         });
         if (!uploadResponse.ok) throw new Error(`Could not securely upload ${file.name}.`);
@@ -170,6 +183,13 @@ export function ResidentDashboard({
       await loadRequests();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The request could not be submitted.");
+      if (createdReferenceNo) {
+        setError("");
+        setNotice(`Request ${createdReferenceNo} was created, but a supporting file could not be uploaded. Contact the barangay office before submitting another request.`);
+        setPurpose("");
+        setFiles([]);
+        setShowForm(false);
+      }
       await loadRequests();
     } finally {
       setSubmitting(false);
@@ -222,7 +242,7 @@ export function ResidentDashboard({
           <form className="mt-5 space-y-4" onSubmit={submitRequest}>
             <p className="rounded-lg border border-[#dce8dc] bg-[#f7faf6] px-3.5 py-3 text-[11px] leading-5 text-[#64746a]">
               Your request details and attached files are shared with authorized barangay staff for processing. Attach only documents needed.{" "}
-              <Link className="font-semibold text-[#175b43] underline underline-offset-2" href="/privacy">Read the privacy notice</Link>.
+              <Link className="font-semibold text-[#175b43] underline underline-offset-2" href="/privacy" rel="noopener noreferrer" target="_blank">Read the privacy notice</Link>.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-[12px] font-semibold text-[#4d5b53]">Document type
@@ -238,13 +258,35 @@ export function ResidentDashboard({
               </label>
             </div>
             <label className="block text-[12px] font-semibold text-[#4d5b53]">Supporting documents <span className="font-normal text-[#99a29c]">(optional, PDF or image · max 10 MB each)</span>
-              <span className="mt-1.5 flex min-h-[76px] cursor-pointer items-center gap-3 rounded-lg border border-dashed border-[#d9e2da] bg-[#fbfcfa] px-4 text-[#78867d] hover:border-[#9eb8a3]">
+              <span className="mt-1.5 flex min-h-[76px] cursor-pointer items-center gap-3 rounded-lg border border-dashed border-[#d9e2da] bg-[#fbfcfa] px-4 text-[#78867d] hover:border-[#9eb8a3] focus-within:border-[#145b43] focus-within:ring-2 focus-within:ring-[#dce9df]">
                 <UploadCloud size={18} className="shrink-0 text-[#6c947b]" />
-                <span className="flex-1 text-[12px]">{files.length ? files.map((file) => file.name).join(", ") : "Choose files to attach"}</span>
-                <input accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="Choose supporting documents" className="sr-only" multiple onChange={(event) => setFiles(Array.from(event.target.files ?? []))} type="file" />
+                <span className="flex-1 text-[12px]">Choose files to attach</span>
+                <input accept=".pdf,.jpg,.jpeg,.png,.webp" aria-label="Choose supporting documents" className="sr-only" multiple onChange={(event) => {
+                  const selectedFiles = Array.from(event.target.files ?? []);
+                  event.currentTarget.value = "";
+                  const invalidFiles = selectedFiles.filter((file) => getSupportingFileIssue(file));
+                  setError(invalidFiles.map((file) => `${file.name}: ${getSupportingFileIssue(file)}`).join(" "));
+                  const validFiles = selectedFiles.filter((file) => !getSupportingFileIssue(file));
+                  setFiles((current) => {
+                    const existing = new Set(current.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+                    return [...current, ...validFiles.filter((file) => {
+                      const key = `${file.name}:${file.size}:${file.lastModified}`;
+                      if (existing.has(key)) return false;
+                      existing.add(key);
+                      return true;
+                    })];
+                  });
+                }} type="file" />
               </span>
               <span className="mt-2 block rounded-md border border-[#f0dfbd] bg-[#fff9ec] px-3 py-2 text-[10px] font-normal leading-4 text-[#896838]">Uploaded files are checked for type and size but are not malware-scanned. Only upload files you trust.</span>
             </label>
+            {files.length > 0 && <ul aria-label="Selected supporting documents" className="space-y-1.5">
+              {files.map((file, index) => <li className="flex items-center gap-2 rounded-md border border-[#edf0ed] bg-white px-3 py-2 text-[11px] text-[#58675d]" key={`${file.name}:${file.size}:${file.lastModified}`}>
+                <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                <span className="shrink-0 text-[10px] text-[#8a958e]">{file.size < 1024 * 1024 ? `${Math.max(1, Math.round(file.size / 1024))} KB` : `${(file.size / (1024 * 1024)).toFixed(1)} MB`}</span>
+                <button aria-label={`Remove ${file.name}`} className="button-icon flex h-8 w-8 shrink-0 items-center justify-center text-[#8a958e]" onClick={() => setFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))} type="button"><X size={14} /></button>
+              </li>)}
+            </ul>}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf0ed] pt-4">
               <p className="max-w-[510px] text-[11px] leading-5 text-[#8a958e]">By submitting, you confirm the request information is accurate and ask the barangay to process this document request.</p>
               <button aria-busy={submitting} className="button-primary" disabled={submitting} type="submit">{submitting ? <><LoaderCircle className="animate-spin" size={15} /> Submitting…</> : <>Submit request <ArrowRight size={15} /></>}</button>
@@ -280,8 +322,9 @@ export function ResidentDashboard({
                     <div className="flex min-w-0 items-start gap-3">
                       <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f0f4ef] text-[#60836e]"><Files size={16} /></span>
                       <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2"><p className="text-[13px] font-semibold text-[#33463b]">{documentNames[request.type] ?? request.type}</p><span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${statusStyles[request.status]}`}>{request.status.replaceAll("_", " ")}</span></div>
+                        <div className="flex flex-wrap items-center gap-2"><p className="text-[13px] font-semibold text-[#33463b]">{documentNames[request.type] ?? request.type}</p><span className={`rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide ${statusStyles[request.status]}`}>{requestStatusLabels[request.status]}</span></div>
                         <p className="mt-1 text-[11px] text-[#87928a]">{request.referenceNo} <span className="px-1 text-[#cdd3ce]">·</span> {request.purpose}</p>
+                        <p className="mt-1 text-[11px] font-medium text-[#526b5b]">{getResidentRequestNextStep(request.status, Boolean(request.remarks))}</p>
                         <p className="mt-1 flex items-center gap-1 text-[10px] text-[#a0a9a2]"><CalendarDays size={11} /> Submitted {new Date(request.submittedAt).toLocaleDateString("en-PH")}</p>
                         {request.remarks && <p className="mt-1.5 text-[11px] text-[#815b3b]">Staff note: {request.remarks}</p>}
                         {request.uploads.length > 0 && <p className="mt-1 text-[10px] text-[#8f9b93]">{request.uploads.length} supporting file{request.uploads.length === 1 ? "" : "s"}</p>}

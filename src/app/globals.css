@@ -100,6 +100,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   transition: border-color .15s ease;
 }
 .field:focus { border-color: #5f9077; box-shadow: 0 0 0 3px rgb(95 144 119 / 12%); }
+.field:focus-visible { outline: 2px solid #145b43; outline-offset: 2px; }
 .field::placeholder { color: #a1aaa5; }
 .button-primary {
   display: inline-flex;
@@ -279,8 +280,8 @@ button:not(:disabled) { cursor: pointer; }
     top: 21px;
     right: 14px;
     display: inline-flex;
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     align-items: center;
     justify-content: center;
     border: 1px solid var(--line);
@@ -303,8 +304,8 @@ button:not(:disabled) { cursor: pointer; }
   .topbar-heading { display: flex; align-items: center; gap: 12px; }
   .mobile-menu-toggle {
     display: inline-flex;
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;

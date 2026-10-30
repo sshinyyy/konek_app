@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Activity, Check, CircleAlert, FileCog, LoaderCircle, LockKeyhole, Plus, RefreshCw, ShieldCheck, UserCheck, UserRoundX, Users } from "lucide-react";
+import { readJsonResponse } from "@/lib/client-response";
 
 type Staff = { id: string; email: string; isActive: boolean; createdAt: string };
 type Settings = {
@@ -33,6 +34,10 @@ type AdminData = {
   verifications?: Verification[];
   adminActionCount?: number;
 };
+type AdminEndpointResponse =
+  | { staff: Staff[] }
+  | Settings
+  | { audit: Audit[]; verifications: Verification[]; adminActionCount: number };
 
 async function fetchAdminData(section: AdminSection, signal?: AbortSignal): Promise<AdminData> {
   const endpoints = section === "overview"
@@ -45,16 +50,16 @@ async function fetchAdminData(section: AdminSection, signal?: AbortSignal): Prom
   ));
   const results = await Promise.all(responses.map(async (response) => {
     if (!response.ok) throw new Error("The administration data could not be loaded.");
-    return response.json();
+    return readJsonResponse<AdminEndpointResponse>(response, "The administration data could not be loaded.");
   }));
   const data: AdminData = {};
   for (const [index, endpoint] of endpoints.entries()) {
     const result = results[index];
     if (endpoint === "staff") {
-      data.staff = result.staff;
+      if ("staff" in result) data.staff = result.staff;
     } else if (endpoint === "settings") {
-      data.settings = result;
-    } else {
+      if ("certificateValidityDays" in result) data.settings = result;
+    } else if ("audit" in result) {
       data.audit = result.audit;
       data.verifications = result.verifications;
       data.adminActionCount = result.adminActionCount;
@@ -98,6 +103,7 @@ export function AdminConsole({
   const [staffPassword, setStaffPassword] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [uploadingAsset, setUploadingAsset] = useState<"seal" | "signature" | null>(null);
   const [togglingStaffId, setTogglingStaffId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -144,7 +150,7 @@ export function AdminConsole({
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: staffEmail, password: staffPassword }),
       });
-      const result = await response.json();
+      const result = await readJsonResponse<{ error?: string }>(response, "The staff account could not be created.");
       if (!response.ok) throw new Error(result.error ?? "The staff account could not be created.");
       setStaffEmail("");
       setStaffPassword("");
@@ -164,7 +170,7 @@ export function AdminConsole({
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !member.isActive }),
       });
-      const result = await response.json();
+      const result = await readJsonResponse<{ error?: string }>(response, "The account status could not be changed.");
       if (!response.ok) throw new Error(result.error ?? "The account status could not be changed.");
       setNotice(`Staff account ${member.isActive ? "disabled" : "enabled"}.`);
       await load();
@@ -176,7 +182,8 @@ export function AdminConsole({
   }
 
   async function uploadAsset(type: "seal" | "signature", file?: File) {
-    if (!file) return;
+    if (!file || uploadingAsset) return;
+    setUploadingAsset(type);
     setError("");
     setNotice("");
     try {
@@ -192,7 +199,7 @@ export function AdminConsole({
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, mimeType: file.type, sizeBytes: file.size }),
       });
-      const signingResult = await sign.json();
+      const signingResult = await readJsonResponse<{ error?: string; uploadUrl: string; objectKey: string }>(sign, "The upload could not be started.");
       if (!sign.ok) throw new Error(signingResult.error ?? "The upload could not be started.");
       const upload = await fetch(signingResult.uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
       if (!upload.ok) throw new Error("The image could not be uploaded to secure storage.");
@@ -200,6 +207,8 @@ export function AdminConsole({
       setNotice(`${type === "seal" ? "Seal" : "Signature"} image uploaded. Save the certificate settings to apply it.`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The image could not be uploaded.");
+    } finally {
+      setUploadingAsset(null);
     }
   }
 
@@ -212,7 +221,7 @@ export function AdminConsole({
       const response = await fetch("/api/v1/admin/settings", {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings),
       });
-      const result = await response.json();
+      const result = await readJsonResponse<Settings & { error?: string }>(response, "Settings could not be saved.");
       if (!response.ok) throw new Error(result.error ?? "Settings could not be saved.");
       setSettings(result);
       setNotice("Barangay and certificate settings saved.");
@@ -252,9 +261,9 @@ export function AdminConsole({
             { href: "/admin/staff", title: "Staff accounts", detail: "Manage access to the staff workspace", icon: Users },
             { href: "/admin/settings", title: "Barangay setup", detail: "Update official certificate details", icon: FileCog },
             { href: "/admin/activity", title: "Activity log", detail: "Review administrative and verification events", icon: Activity },
-          ].map(({ href, title, detail, icon: Icon }) => <Link className="card group flex items-start gap-3 p-4 transition hover:-translate-y-0.5 hover:border-[#cbdacb] hover:shadow-md" href={href} key={href}>
+          ].map(({ href, title, detail, icon: Icon }) => <Link className={`card group flex min-h-[92px] items-start gap-3 p-4 transition hover:-translate-y-0.5 hover:border-[#cbdacb] hover:shadow-md ${href === "/staff" ? "border-[#d4e2d5] bg-[#f7faf6]" : ""}`} href={href} key={href}>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ed] text-[#5e8269]"><Icon size={18} /></span>
-            <span><span className="block text-[12px] font-semibold text-[#36483c]">{title}</span><span className="mt-1 block text-[10px] leading-4 text-[#87938a]">{detail}</span></span>
+            <span><span className="block text-[12px] font-semibold text-[#36483c]">{href === "/staff" ? "Review requests" : title}</span><span className="mt-1 block text-[10px] leading-4 text-[#87938a]">{detail}</span></span>
           </Link>)}
         </div>
       </section>}
@@ -269,9 +278,9 @@ export function AdminConsole({
             <label className={label}>Office address<input className="field mt-1.5 min-h-[38px] text-[11px]" onChange={(event) => update("officeAddress", event.target.value)} value={settings.officeAddress ?? ""} /></label>
             <div className="grid grid-cols-2 gap-3"><label className={label}>Contact number<input className="field mt-1.5 min-h-[38px] text-[11px]" onChange={(event) => update("contactNumber", event.target.value)} value={settings.contactNumber ?? ""} /></label><label className={label}>Certificate validity (days)<input className="field mt-1.5 min-h-[38px] text-[11px]" max={3650} min={1} onChange={(event) => update("certificateValidityDays", Number(event.target.value))} required type="number" value={settings.certificateValidityDays} /></label></div>
             <div className="grid grid-cols-2 gap-3">
-              {(["seal", "signature"] as const).map((type) => <label className="flex min-h-[70px] cursor-pointer flex-col justify-center rounded-lg border border-dashed border-[#d9e2da] px-3 py-2.5 hover:border-[#9eb8a3]" key={type}><span className="text-[10px] font-semibold text-[#536157]">Official {type} <span className="font-normal text-[#9aa49d]">· PNG, max 2 MB</span></span><span className="mt-1 truncate text-[9px] text-[#91a098]">{settings[type === "seal" ? "sealObjectKey" : "signatureObjectKey"] ? "Image uploaded ✓" : "No image added"}</span><input accept="image/png" className="sr-only" onChange={(event) => void uploadAsset(type, event.target.files?.[0])} type="file" /></label>)}
+              {(["seal", "signature"] as const).map((type) => <label className="flex min-h-[70px] cursor-pointer flex-col justify-center rounded-lg border border-dashed border-[#d9e2da] px-3 py-2.5 hover:border-[#9eb8a3] focus-within:border-[#145b43] focus-within:ring-2 focus-within:ring-[#dce9df]" key={type}><span className="text-[10px] font-semibold text-[#536157]">Official {type} <span className="font-normal text-[#9aa49d]">· PNG, max 2 MB</span></span><span className="mt-1 truncate text-[9px] text-[#91a098]">{uploadingAsset === type ? "Uploading…" : settings[type === "seal" ? "sealObjectKey" : "signatureObjectKey"] ? "Image uploaded ✓" : "No image added"}</span><input accept="image/png" aria-label={`Upload official ${type}`} className="sr-only" disabled={uploadingAsset !== null} onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ""; void uploadAsset(type, file); }} type="file" /></label>)}
             </div>
-            <div className="flex justify-end border-t border-[#edf0ed] pt-3"><button aria-busy={busy} className="button-primary min-h-[37px] text-[11px]" disabled={busy} type="submit">{busy ? <LoaderCircle className="animate-spin" size={14} /> : <Check size={14} />} Save certificate settings</button></div>
+            <div className="flex justify-end border-t border-[#edf0ed] pt-3"><button aria-busy={busy || uploadingAsset !== null} className="button-primary min-h-[37px] text-[11px]" disabled={busy || uploadingAsset !== null} type="submit">{busy || uploadingAsset ? <LoaderCircle className="animate-spin" size={14} /> : <Check size={14} />} Save certificate settings</button></div>
           </form>}
         </section>
       </div>}

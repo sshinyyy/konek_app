@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, BadgeCheck, CircleAlert, LoaderCircle, Search, ShieldCheck } from "lucide-react";
+import { readJsonResponse } from "@/lib/client-response";
 
 type Result = {
   authentic: boolean;
@@ -48,7 +49,7 @@ export function VerificationPortal({
     setError("");
     try {
       const response = await fetch(`/api/v1/verify?token=${encodeURIComponent(token)}`, { cache: "no-store" });
-      const body = await response.json();
+      const body = await readJsonResponse<Result & { error?: string }>(response, "The verification service is unavailable.");
       if (!response.ok) throw new Error(body.error ?? "The verification service is unavailable.");
       setResult(body);
     } catch (reason) {
@@ -62,7 +63,7 @@ export function VerificationPortal({
     const token = extractToken(initialToken);
     void fetch(`/api/v1/verify?token=${encodeURIComponent(token)}`, { cache: "no-store" })
       .then(async (response) => {
-        const body = await response.json();
+        const body = await readJsonResponse<Result & { error?: string }>(response, "The verification service is unavailable.");
         if (!response.ok) throw new Error(body.error ?? "The verification service is unavailable.");
         setResult(body);
       })

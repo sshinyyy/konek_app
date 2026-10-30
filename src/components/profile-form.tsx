@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Check, LoaderCircle, LockKeyhole, Save } from "lucide-react";
+import { readJsonResponse } from "@/lib/client-response";
 
 const label = "mb-1.5 block text-[12px] font-semibold text-[#4d5b53]";
 const blank = { fullName: "", dateOfBirth: "", address: "", phone: "", civilStatus: "Single", gender: "" };
+type ProfileData = typeof blank;
 
 export function ProfileForm({ email }: { email: string }) {
   const [form, setForm] = useState(blank);
@@ -18,7 +21,7 @@ export function ProfileForm({ email }: { email: string }) {
       try {
         const response = await fetch("/api/v1/profile", { cache: "no-store" });
         if (!response.ok) throw new Error("Your profile could not be loaded.");
-        const profile = await response.json();
+        const profile = await readJsonResponse<ProfileData>(response, "Your profile could not be loaded.");
         setForm({ ...profile, gender: profile.gender ?? "" });
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "Your profile could not be loaded.");
@@ -35,7 +38,7 @@ export function ProfileForm({ email }: { email: string }) {
       const response = await fetch("/api/v1/profile", {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form),
       });
-      const result = await response.json();
+      const result = await readJsonResponse<{ error?: string }>(response, "Your profile could not be updated.");
       if (!response.ok) throw new Error(result.error ?? "Your profile could not be updated.");
       setMessage("Your profile has been updated.");
     } catch (reason) {
@@ -51,7 +54,7 @@ export function ProfileForm({ email }: { email: string }) {
       <div className="card mt-6 p-5 sm:p-7">
         <div className="mb-6 flex items-start gap-3 border-b border-[#edf0ed] pb-5">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#eff4ef] text-[#62856e]"><LockKeyhole size={16} /></span>
-          <div><p className="text-[13px] font-semibold text-[#394a40]">Encrypted personal information</p><p className="mt-1 text-[11px] leading-5 text-[#8b968f]">Sensitive resident details are encrypted at rest and visible only to you and authorized staff.</p></div>
+          <div><p className="text-[13px] font-semibold text-[#394a40]">Encrypted personal information</p><p className="mt-1 text-[11px] leading-5 text-[#8b968f]">Sensitive resident details are encrypted at rest and visible only to you and authorized staff. <Link className="font-semibold text-[#175b43] underline underline-offset-2" href="/privacy" rel="noopener noreferrer" target="_blank">Read the privacy notice</Link>.</p></div>
         </div>
         {loading ? <p className="flex items-center gap-2 py-8 text-[12px] text-[#859189]"><LoaderCircle className="animate-spin" size={15} />Loading profile…</p> : (
           <form className="space-y-4" onSubmit={save}>

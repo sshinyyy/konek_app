@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ArrowDownToLine, ArrowRight, Check, Clock3, FileCheck2, Files, LoaderCircle, RefreshCw, Search, ShieldCheck, UserRound, X } from "lucide-react";
+import { requestStatusLabels } from "@/lib/request-presentation";
+import { readJsonResponse } from "@/lib/client-response";
 
 type Row = {
   id: string;
@@ -34,6 +36,7 @@ type RequestPage = {
   counts: Record<string, number>;
   totalCount: number;
   nextPage: number | null;
+  error?: string;
 };
 
 export function StaffDashboard({
@@ -66,10 +69,10 @@ export function StaffDashboard({
     try {
       const response = await fetch("/api/v1/requests?page=0", { cache: "no-store" });
       if (!response.ok) {
-        const body = await response.json() as { error?: string };
+        const body = await readJsonResponse<{ error?: string }>(response, "Requests could not be loaded.");
         throw new Error(body.error ?? "Requests could not be loaded.");
       }
-      const body = await response.json() as RequestPage;
+      const body = await readJsonResponse<RequestPage>(response, "Requests could not be loaded.");
       setRows(body.requests);
       setNextPage(body.nextPage);
       setTotalCount(body.totalCount);
@@ -84,7 +87,7 @@ export function StaffDashboard({
     if (section === "profile") return;
     void fetch("/api/v1/requests?page=0", { cache: "no-store" })
       .then(async (response) => {
-        const body = await response.json();
+        const body = await readJsonResponse<RequestPage>(response, "Requests could not be loaded.");
         if (!response.ok) throw new Error(body.error ?? "Requests could not be loaded.");
         return body as RequestPage;
       })
@@ -105,10 +108,10 @@ export function StaffDashboard({
     try {
       const response = await fetch(`/api/v1/requests?page=${nextPage}`, { cache: "no-store" });
       if (!response.ok) {
-        const body = await response.json() as { error?: string };
+        const body = await readJsonResponse<{ error?: string }>(response, "More requests could not be loaded.");
         throw new Error(body.error ?? "More requests could not be loaded.");
       }
-      const body = await response.json() as RequestPage;
+      const body = await readJsonResponse<RequestPage>(response, "More requests could not be loaded.");
       setRows((current) => {
         const existingIds = new Set(current.map((row) => row.id));
         return [...current, ...body.requests.filter((row) => !existingIds.has(row.id))];
@@ -143,7 +146,7 @@ export function StaffDashboard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(action === "review" ? { action } : { action, remarks }),
       });
-      const body = await response.json();
+      const body = await readJsonResponse<{ error?: string; referenceNo: string }>(response, "This request could not be updated.");
       if (!response.ok) throw new Error(body.error ?? "This request could not be updated.");
       setNotice(action === "issue" ? `Document ${body.referenceNo} issued with QR verification.` : action === "reject" ? "Request declined and resident notified in their portal." : "Request moved into review.");
       setRemarks("");
@@ -164,7 +167,7 @@ export function StaffDashboard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(profile),
       });
-      const body = await response.json();
+      const body = await readJsonResponse<{ error?: string }>(response, "Your staff profile could not be saved.");
       if (!response.ok) throw new Error(body.error ?? "Your staff profile could not be saved.");
       setNotice("Your staff profile has been saved.");
     } catch (reason) {
@@ -187,7 +190,7 @@ export function StaffDashboard({
           { title: "In review", count: counts.review, icon: Search, tone: "text-[#607fa4]" },
           { title: "Documents issued", count: counts.issued, icon: FileCheck2, tone: "text-[#508064]" },
           { title: "Declined", count: counts.rejected, icon: Files, tone: "text-[#a66758]" },
-        ].map(({ title, count, icon: Icon, tone }) => <div className="card flex items-center gap-3 p-4" key={title}><span className={`flex h-9 w-9 items-center justify-center rounded-lg bg-[#f2f5f1] ${tone}`}><Icon size={17} /></span><div><p className="text-[10px] text-[#87928a]">{title}</p><p className="mt-0.5 text-[22px] font-semibold text-[#304238]">{loading ? "—" : count}</p></div></div>)}
+        ].map(({ title, count, icon: Icon, tone }) => <div className={`card flex items-center gap-3 p-4 ${title === "Awaiting review" ? "border-[#eadfc5] bg-[#fffdf8]" : ""}`} key={title}><span className={`flex h-9 w-9 items-center justify-center rounded-lg bg-[#f2f5f1] ${tone}`}><Icon size={17} /></span><div><p className="text-[10px] font-semibold text-[#68766d]">{title}</p><p className="mt-0.5 text-[22px] font-semibold text-[#304238]">{loading ? "—" : count}</p></div></div>)}
       </div>}
 
       {section === "profile" && <section className="card mt-6 max-w-[820px] p-5 sm:p-7">
@@ -219,11 +222,11 @@ export function StaffDashboard({
         <section className="card min-w-0 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#edf0ed] p-4">
             <div><p className="eyebrow">APPLICATIONS</p><h2 className="mt-1 text-[16px] font-semibold">Request queue</h2></div>
-            <label className="relative min-w-[150px] flex-1 sm:max-w-[190px]"><Search className="absolute left-2.5 top-2.5 text-[#9aa49d]" size={14} /><input aria-label="Search requests" className="field min-h-[34px] pl-8 text-[11px]" onChange={(event) => setSearch(event.target.value)} placeholder="Search name or ref." value={search} /></label>
+            <label className="relative min-w-[150px] flex-1 sm:max-w-[190px]"><Search className="absolute left-2.5 top-3 text-[#87948b]" size={14} /><input aria-label="Search requests" className="field min-h-[40px] pl-8 text-[11px]" onChange={(event) => setSearch(event.target.value)} placeholder="Search name or ref." value={search} /></label>
           </div>
           <div className="flex gap-1 overflow-x-auto border-b border-[#edf0ed] px-3 py-2">
-            {[["ALL", "All"], ["PENDING", "Pending"], ["IN_REVIEW", "In review"], ["ISSUED", "Issued"], ["REJECTED", "Declined"]].map(([value, label]) => (
-              <button className={`shrink-0 rounded-md px-2.5 py-1.5 text-[10px] font-semibold ${filter === value ? "bg-[#eaf2eb] text-[#175b43]" : "text-[#828d86] hover:bg-[#f6f8f5]"}`} key={value} onClick={() => setFilter(value)} type="button">{label}</button>
+            {[["ALL", "All"], ["PENDING", requestStatusLabels.PENDING], ["IN_REVIEW", requestStatusLabels.IN_REVIEW], ["APPROVED", requestStatusLabels.APPROVED], ["ISSUED", requestStatusLabels.ISSUED], ["REJECTED", requestStatusLabels.REJECTED]].map(([value, label]) => (
+              <button aria-pressed={filter === value} className={`min-h-[40px] shrink-0 rounded-md px-3 py-1.5 text-[10px] font-semibold ${filter === value ? "bg-[#eaf2eb] text-[#175b43]" : "text-[#68766d] hover:bg-[#f6f8f5]"}`} key={value} onClick={() => setFilter(value)} type="button">{label}</button>
             ))}
           </div>
           {loading ? <div className="flex justify-center py-12"><LoaderCircle className="animate-spin text-[#83958a]" size={17} /></div>
@@ -231,7 +234,7 @@ export function StaffDashboard({
               : <div className="max-h-[610px] divide-y divide-[#edf0ed] overflow-y-auto">
                 {visible.map((row) => <button aria-pressed={selected?.id === row.id} className={`flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[#fafbf9] ${selected?.id === row.id ? "bg-[#f5f8f4]" : ""}`} key={row.id} onClick={() => { setSelected(row); setRemarks(""); }} type="button">
                   <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#eff4ef] text-[#638470]"><Files size={15} /></span>
-                  <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-1.5"><span className="truncate text-[11px] font-semibold text-[#35463b]">{row.resident?.fullName ?? "Resident"}</span><span className={`rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase ${badge[row.status]}`}>{row.status.replaceAll("_", " ")}</span></span><span className="mt-1 block truncate text-[10px] text-[#89938c]">{titles[row.type] ?? row.type} · {row.referenceNo}</span><span className="mt-1 block text-[9px] text-[#a1aaa3]">{new Date(row.submittedAt).toLocaleDateString("en-PH")}</span></span><ArrowRight className="mt-2 shrink-0 text-[#a5afa8]" size={14} />
+                  <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-1.5"><span className="truncate text-[11px] font-semibold text-[#35463b]">{row.resident?.fullName ?? "Resident"}</span><span className={`rounded-full px-1.5 py-0.5 text-[8px] font-bold ${badge[row.status]}`}>{requestStatusLabels[row.status]}</span></span><span className="mt-1 block truncate text-[10px] text-[#89938c]">{titles[row.type] ?? row.type} · {row.referenceNo}</span><span className="mt-1 block text-[9px] text-[#a1aaa3]">{new Date(row.submittedAt).toLocaleDateString("en-PH")}</span></span><ArrowRight className="mt-2 shrink-0 text-[#a5afa8]" size={14} />
                 </button>)}
               </div>}
           {!loading && totalCount > 0 && <div className="flex items-center justify-between gap-2 border-t border-[#edf0ed] px-4 py-3">
@@ -243,7 +246,7 @@ export function StaffDashboard({
         <section className="card overflow-hidden">
           {selected ? <>
             <div className="border-b border-[#edf0ed] bg-[#fbfcfa] p-4">
-              <div className="flex items-start justify-between gap-2"><div><p className="eyebrow">REQUEST DETAILS</p><h2 className="mt-1 text-[16px] font-semibold leading-5">{titles[selected.type] ?? selected.type}</h2></div><span className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase ${badge[selected.status]}`}>{selected.status.replaceAll("_", " ")}</span></div>
+              <div className="flex items-start justify-between gap-2"><div><p className="eyebrow">REQUEST DETAILS</p><h2 className="mt-1 text-[16px] font-semibold leading-5">{titles[selected.type] ?? selected.type}</h2></div><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${badge[selected.status]}`}>{requestStatusLabels[selected.status]}</span></div>
               <p className="mt-2 text-[10px] text-[#89938c]">{selected.referenceNo}</p>
             </div>
             <div className="space-y-4 p-4">
@@ -262,7 +265,7 @@ export function StaffDashboard({
               </div>
               {selected.remarks && <div className="rounded-lg bg-[#fff8ed] p-3 text-[10px] text-[#896838]">Staff remarks: {selected.remarks}</div>}
               {["PENDING", "IN_REVIEW"].includes(selected.status) && <>
-                <label className="block text-[10px] font-semibold text-[#68756d]">Review note <span className="font-normal text-[#9aa49d]">(required if declining)</span><textarea className="field mt-1.5 min-h-[66px] resize-y text-[11px]" onChange={(event) => setRemarks(event.target.value)} placeholder="Add a note for the resident…" value={remarks} /></label>
+                <label className="block text-[10px] font-semibold text-[#68756d]">Review note <span className="font-normal text-[#9aa49d]">(required if declining, max 1,000 characters)</span><textarea className="field mt-1.5 min-h-[66px] resize-y text-[11px]" maxLength={1000} onChange={(event) => setRemarks(event.target.value)} placeholder="Add a note for the resident…" value={remarks} /></label>
                 <div className="grid grid-cols-2 gap-2">
                   {selected.status === "PENDING" && <button aria-busy={busy} className="button-secondary min-h-[36px] text-[10px]" disabled={busy} onClick={() => void process("review")} type="button">{busy ? <LoaderCircle className="animate-spin" size={13} /> : <Search size={13} />} Start review</button>}
                   <button className="button-danger min-h-[36px] text-[10px]" disabled={busy || remarks.trim().length < 3} onClick={() => void process("reject")} type="button"><X size={13} /> Decline</button>
