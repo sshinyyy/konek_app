@@ -177,7 +177,7 @@ export function StaffDashboard({
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><p className="eyebrow">{section === "dashboard" ? "REQUEST PROCESSING" : "STAFF WORKSPACE"}</p><h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] sm:text-[34px]">{section === "dashboard" ? hasDisplayName ? `Good day, ${staffName.split(" ")[0]}.` : "Request queue" : "Your staff profile"}</h1><p className="mt-1.5 text-[13px] text-[#7d8981]">{section === "dashboard" ? "Review resident requests and issue verified documents." : "Manage the staff details shown in your workspace."}</p></div>
+        <div><p className="eyebrow">{section === "dashboard" ? "REQUEST PROCESSING" : "STAFF WORKSPACE"}</p><h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] sm:text-[34px]">{section === "dashboard" ? hasDisplayName ? `Good day, ${staffName.split(" ")[0]}.` : "Staff workspace" : "Your staff profile"}</h1><p className="mt-1.5 text-[13px] text-[#7d8981]">{section === "dashboard" ? "Review resident requests and issue verified documents." : "Manage the staff details shown in your workspace."}</p></div>
         {section === "dashboard" && <button aria-busy={loading} className="button-secondary" disabled={loading || busy} onClick={() => { setLoading(true); void refresh(); }} type="button"><RefreshCw className={loading ? "animate-spin" : ""} size={14} /> Refresh queue</button>}
       </div>
 

@@ -186,7 +186,7 @@ export function ResidentDashboard({
         <div>
           <p className="eyebrow">{today} <span className="px-1.5 text-[#c5cdc6]">·</span> RESIDENT PORTAL</p>
           <h1 className="mt-2 text-[30px] font-semibold tracking-[-.04em] text-[#24372e] sm:text-[34px]">Good day, {fullName.split(" ")[0]}.</h1>
-          <p className="mt-1.5 text-[13px] text-[#7d8981]">Your community services, all in one place.</p>
+          <p className="mt-1.5 text-[13px] text-[#7d8981]">Submit requests, track progress, and download issued documents.</p>
         </div>
         <Link className="button-primary" href="/requests"><FilePlus2 size={16} /> New request</Link>
       </div>
@@ -221,7 +221,7 @@ export function ResidentDashboard({
           </div>
           <form className="mt-5 space-y-4" onSubmit={submitRequest}>
             <p className="rounded-lg border border-[#dce8dc] bg-[#f7faf6] px-3.5 py-3 text-[11px] leading-5 text-[#64746a]">
-              Your request details and any files you attach are shared with authorized barangay staff to process this document request. Attach only documents needed for this request.{" "}
+              Your request details and attached files are shared with authorized barangay staff for processing. Attach only documents needed.{" "}
               <Link className="font-semibold text-[#175b43] underline underline-offset-2" href="/privacy">Read the privacy notice</Link>.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
