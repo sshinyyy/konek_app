@@ -19,7 +19,9 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
-    email: "", password: "", fullName: "", dateOfBirth: "", address: "", phone: "", civilStatus: "Single",
+    email: "", password: "", firstName: "", middleName: "", lastName: "",
+    dateOfBirth: "", houseNumber: "", street: "", purokSitio: "", barangay: "",
+    cityMunicipality: "", province: "", postalCode: "", phone: "", civilStatus: "Single",
   });
   const isRegister = mode === "register";
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
@@ -74,27 +76,42 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
         <div className="mb-6">
             <p className="eyebrow">{isRegister ? `Create your account · Step ${step} of 2` : "Welcome back"}</p>
             <h2 className="mt-2 text-[29px] font-semibold tracking-[-.035em] text-[#23362d]">
-              {isRegister ? (step === 1 ? "Let’s get you set up." : "A little about you.") : "Sign in to continue."}
+              {isRegister ? (step === 1 ? "Let’s get you set up." : "Finish your resident profile.") : "Sign in to continue."}
             </h2>
             <p className="mt-2 text-[13px] leading-6 text-[#818b85]">
               {isRegister
                 ? step === 1
                   ? "Access secure, convenient barangay services online."
-                  : "These details help verify your resident profile and prepare requested barangay documents. Provide accurate information and review the privacy notice below."
+                  : "Add your full legal name and complete home address so barangay documents can be prepared accurately. Review the privacy notice below."
                 : "Manage your requests and documents in one place."}
             </p>
         </div>
         <form className="space-y-4" onSubmit={submit}>
             {isRegister && step === 2 && (
               <>
-                <label className={labelClass}>Full name<input autoComplete="name" className={`${inputClass} mt-1.5`} onChange={(event) => update("fullName", event.target.value)} placeholder="As shown on your ID" required value={form.fullName} /></label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className={labelClass}>First Name:<input autoComplete="given-name" className={`${inputClass} mt-1.5`} onChange={(event) => update("firstName", event.target.value)} required value={form.firstName} /></label>
+                  <label className={labelClass}>Last Name:<input autoComplete="family-name" className={`${inputClass} mt-1.5`} onChange={(event) => update("lastName", event.target.value)} required value={form.lastName} /></label>
+                </div>
+                <label className={labelClass}>Middle Name: <span className="font-normal text-[#8b968f]">(optional)</span><input autoComplete="additional-name" className={`${inputClass} mt-1.5`} onChange={(event) => update("middleName", event.target.value)} value={form.middleName} /></label>
                 <div className="grid grid-cols-2 gap-3">
                   <label className={labelClass}>Date of birth<input className={`${inputClass} mt-1.5`} onChange={(event) => update("dateOfBirth", event.target.value)} required type="date" value={form.dateOfBirth} /></label>
                   <label className={labelClass}>Civil status<select className={`${inputClass} mt-1.5`} onChange={(event) => update("civilStatus", event.target.value)} value={form.civilStatus}>
                     {["Single", "Married", "Widowed", "Separated"].map((value) => <option key={value}>{value}</option>)}
                   </select></label>
                 </div>
-                <label className={labelClass}>Complete address<input autoComplete="street-address" className={`${inputClass} mt-1.5`} onChange={(event) => update("address", event.target.value)} placeholder="House no., street, sitio / purok" required value={form.address} /></label>
+                <fieldset className="space-y-3 rounded-xl border border-[#e8ede8] p-3.5">
+                  <legend className="px-1 text-[12px] font-semibold text-[#4d5b53]">Complete home address</legend>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className={labelClass}>House / Building / Unit No.:<input autoComplete="address-line1" className={`${inputClass} mt-1.5`} onChange={(event) => update("houseNumber", event.target.value)} required value={form.houseNumber} /></label>
+                    <label className={labelClass}>Street:<input className={`${inputClass} mt-1.5`} onChange={(event) => update("street", event.target.value)} required value={form.street} /></label>
+                    <label className={labelClass}>Purok / Sitio:<input className={`${inputClass} mt-1.5`} onChange={(event) => update("purokSitio", event.target.value)} required value={form.purokSitio} /></label>
+                    <label className={labelClass}>Barangay:<input autoComplete="address-level3" className={`${inputClass} mt-1.5`} onChange={(event) => update("barangay", event.target.value)} required value={form.barangay} /></label>
+                    <label className={labelClass}>City / Municipality:<input autoComplete="address-level2" className={`${inputClass} mt-1.5`} onChange={(event) => update("cityMunicipality", event.target.value)} required value={form.cityMunicipality} /></label>
+                    <label className={labelClass}>Province:<input autoComplete="address-level1" className={`${inputClass} mt-1.5`} onChange={(event) => update("province", event.target.value)} required value={form.province} /></label>
+                    <label className={labelClass}>Postal code:<input autoComplete="postal-code" className={`${inputClass} mt-1.5`} inputMode="numeric" maxLength={4} pattern="[0-9]{4}" required value={form.postalCode} onChange={(event) => update("postalCode", event.target.value)} /></label>
+                  </div>
+                </fieldset>
                 <label className={labelClass}>Mobile number<input autoComplete="tel" className={`${inputClass} mt-1.5`} onChange={(event) => update("phone", event.target.value)} placeholder="+63 9XX XXX XXXX" required value={form.phone} /></label>
                 <label className="flex cursor-pointer items-start gap-2.5 text-[11px] leading-5 text-[#69766e]">
                   <input checked={privacyAcknowledged} className="mt-1 accent-[#145b43]" onChange={(event) => setPrivacyAcknowledged(event.target.checked)} required type="checkbox" />
@@ -107,7 +124,7 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
                 <label className={labelClass}>Email address<input autoComplete="email" className={`${inputClass} mt-1.5`} onChange={(event) => update("email", event.target.value)} placeholder="you@example.com" required type="email" value={form.email} /></label>
                 <label className={labelClass}>Password
                   <span className="relative mt-1.5 block">
-                    <input autoComplete={isRegister ? "new-password" : "current-password"} className={`${inputClass} pr-11`} onChange={(event) => update("password", event.target.value)} placeholder={isRegister ? "At least 12 characters" : "Enter your password"} required type={showPassword ? "text" : "password"} value={form.password} />
+                    <input autoComplete={isRegister ? "new-password" : "current-password"} className={`${inputClass} pr-11`} maxLength={isRegister ? 128 : undefined} minLength={isRegister ? 12 : undefined} onChange={(event) => update("password", event.target.value)} placeholder={isRegister ? "At least 12 characters" : "Enter your password"} required type={showPassword ? "text" : "password"} value={form.password} />
                     <button aria-label={showPassword ? "Hide password" : "Show password"} className="button-icon absolute inset-y-0 right-0 flex w-10 items-center justify-center text-[#909a94]" onClick={() => setShowPassword(!showPassword)} type="button">
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -118,7 +135,7 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
             )}
             {error && <p aria-live="polite" className="rounded-lg border border-[#f0d5d0] bg-[#fff6f4] px-3 py-2.5 text-[12px] text-[#a14d3d]">{error}</p>}
             <Button aria-busy={busy} className="mt-2 w-full" disabled={busy} type="submit">
-              {busy ? "Please wait…" : isRegister && step === 1 ? <>Continue <ArrowRight size={15} /></> : isRegister ? <>Create account <Check size={15} /></> : <>Sign in <ArrowRight size={15} /></>}
+              {busy ? "Please wait…" : isRegister && step === 1 ? <>Continue to profile <ArrowRight size={15} /></> : isRegister ? <>Create account <Check size={15} /></> : <>Sign in <ArrowRight size={15} /></>}
             </Button>
             {isRegister && step === 2 && (
               <button className="button-secondary w-full" onClick={() => setStep(1)} type="button"><ArrowLeft size={14} /> Back to account details</button>

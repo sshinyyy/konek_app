@@ -8,15 +8,14 @@ import { createSessionToken, SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/a
 import { encrypt } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
 import { rateLimitResponse } from "@/lib/rate-limit";
+import { formatResidentAddress, formatResidentName, residentIdentityAddressSchema } from "@/lib/resident-profile-schema";
 
 export const runtime = "nodejs";
 
-const schema = z.object({
+const schema = residentIdentityAddressSchema.extend({
   email: z.email().max(320),
   password: z.string().min(12).max(128),
-  fullName: z.string().trim().min(2).max(150),
   dateOfBirth: z.iso.date(),
-  address: z.string().trim().min(6).max(300),
   phone: z.string().trim().regex(/^\+?[0-9 ()-]{7,20}$/),
   civilStatus: z.enum(["Single", "Married", "Widowed", "Separated"]),
   privacyAcknowledged: z.literal(true),
@@ -50,9 +49,19 @@ export async function POST(request: Request) {
       await transaction.residentProfile.create({
         data: {
           userId: createdUser.id,
-          fullNameEncrypted: encrypt(input.fullName),
+          fullNameEncrypted: encrypt(formatResidentName(input)),
           dateOfBirthEncrypted: encrypt(input.dateOfBirth),
-          addressEncrypted: encrypt(input.address),
+          addressEncrypted: encrypt(formatResidentAddress(input)),
+          firstNameEncrypted: encrypt(input.firstName),
+          middleNameEncrypted: encrypt(input.middleName),
+          lastNameEncrypted: encrypt(input.lastName),
+          houseNumberEncrypted: encrypt(input.houseNumber),
+          streetEncrypted: encrypt(input.street),
+          purokSitioEncrypted: encrypt(input.purokSitio),
+          barangayEncrypted: encrypt(input.barangay),
+          cityMunicipalityEncrypted: encrypt(input.cityMunicipality),
+          provinceEncrypted: encrypt(input.province),
+          postalCodeEncrypted: encrypt(input.postalCode),
           phoneEncrypted: encrypt(input.phone),
           civilStatusEncrypted: encrypt(input.civilStatus),
         },

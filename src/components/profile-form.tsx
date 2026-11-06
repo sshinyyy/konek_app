@@ -6,11 +6,17 @@ import { Check, LoaderCircle, LockKeyhole, Save } from "lucide-react";
 import { readJsonResponse } from "@/lib/client-response";
 
 const label = "mb-1.5 block text-[12px] font-semibold text-[#4d5b53]";
-const blank = { fullName: "", dateOfBirth: "", address: "", phone: "", civilStatus: "Single", gender: "" };
-type ProfileData = typeof blank;
+const blank = {
+  firstName: "", middleName: "", lastName: "", dateOfBirth: "",
+  houseNumber: "", street: "", purokSitio: "", barangay: "",
+  cityMunicipality: "", province: "", postalCode: "",
+  phone: "", civilStatus: "Single", gender: "",
+};
+type ProfileData = typeof blank & { address?: string; legacyAddress?: string };
 
 export function ProfileForm({ email }: { email: string }) {
   const [form, setForm] = useState(blank);
+  const [legacyAddress, setLegacyAddress] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -22,7 +28,23 @@ export function ProfileForm({ email }: { email: string }) {
         const response = await fetch("/api/v1/profile", { cache: "no-store" });
         if (!response.ok) throw new Error("Your profile could not be loaded.");
         const profile = await readJsonResponse<ProfileData>(response, "Your profile could not be loaded.");
-        setForm({ ...profile, gender: profile.gender ?? "" });
+        setForm({
+          firstName: profile.firstName ?? "",
+          middleName: profile.middleName ?? "",
+          lastName: profile.lastName ?? "",
+          dateOfBirth: profile.dateOfBirth ?? "",
+          houseNumber: profile.houseNumber ?? "",
+          street: profile.street ?? "",
+          purokSitio: profile.purokSitio ?? "",
+          barangay: profile.barangay ?? "",
+          cityMunicipality: profile.cityMunicipality ?? "",
+          province: profile.province ?? "",
+          postalCode: profile.postalCode ?? "",
+          phone: profile.phone ?? "",
+          civilStatus: profile.civilStatus ?? "Single",
+          gender: profile.gender ?? "",
+        });
+        setLegacyAddress(profile.legacyAddress ?? "");
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "Your profile could not be loaded.");
       } finally { setLoading(false); }
@@ -40,6 +62,7 @@ export function ProfileForm({ email }: { email: string }) {
       });
       const result = await readJsonResponse<{ error?: string }>(response, "Your profile could not be updated.");
       if (!response.ok) throw new Error(result.error ?? "Your profile could not be updated.");
+      setLegacyAddress("");
       setMessage("Your profile has been updated.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Your profile could not be updated.");
@@ -58,12 +81,28 @@ export function ProfileForm({ email }: { email: string }) {
         </div>
         {loading ? <p className="flex items-center gap-2 py-8 text-[12px] text-[#859189]"><LoaderCircle className="animate-spin" size={15} />Loading profile…</p> : (
           <form className="space-y-4" onSubmit={save}>
-            <label className={label}>Full name<input className="field mt-1.5" onChange={(event) => update("fullName", event.target.value)} required value={form.fullName} /></label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className={label}>First Name:<input autoComplete="given-name" className="field mt-1.5" onChange={(event) => update("firstName", event.target.value)} required value={form.firstName} /></label>
+              <label className={label}>Last Name:<input autoComplete="family-name" className="field mt-1.5" onChange={(event) => update("lastName", event.target.value)} required value={form.lastName} /></label>
+            </div>
+            <label className={label}>Middle Name: <span className="font-normal text-[#8b968f]">(optional)</span><input autoComplete="additional-name" className="field mt-1.5" onChange={(event) => update("middleName", event.target.value)} value={form.middleName} /></label>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className={label}>Email address<input className="field mt-1.5 bg-[#f7f9f6] text-[#818c84]" disabled value={email} /></label>
               <label className={label}>Date of birth<input className="field mt-1.5" onChange={(event) => update("dateOfBirth", event.target.value)} required type="date" value={form.dateOfBirth} /></label>
             </div>
-            <label className={label}>Complete address<input className="field mt-1.5" onChange={(event) => update("address", event.target.value)} required value={form.address} /></label>
+            {legacyAddress && <p className="rounded-lg bg-[#f7f9f6] px-3 py-2.5 text-[11px] leading-5 text-[#6f7c73]">Previously saved address: {legacyAddress}. Please fill in the detailed address fields below.</p>}
+            <fieldset className="space-y-3 rounded-xl border border-[#e8ede8] p-3.5">
+              <legend className="px-1 text-[12px] font-semibold text-[#4d5b53]">Complete home address</legend>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className={label}>House / Building / Unit No.:<input autoComplete="address-line1" className="field mt-1.5" onChange={(event) => update("houseNumber", event.target.value)} required value={form.houseNumber} /></label>
+                <label className={label}>Street:<input className="field mt-1.5" onChange={(event) => update("street", event.target.value)} required value={form.street} /></label>
+                <label className={label}>Purok / Sitio:<input className="field mt-1.5" onChange={(event) => update("purokSitio", event.target.value)} required value={form.purokSitio} /></label>
+                <label className={label}>Barangay:<input autoComplete="address-level3" className="field mt-1.5" onChange={(event) => update("barangay", event.target.value)} required value={form.barangay} /></label>
+                <label className={label}>City / Municipality:<input autoComplete="address-level2" className="field mt-1.5" onChange={(event) => update("cityMunicipality", event.target.value)} required value={form.cityMunicipality} /></label>
+                <label className={label}>Province:<input autoComplete="address-level1" className="field mt-1.5" onChange={(event) => update("province", event.target.value)} required value={form.province} /></label>
+                <label className={label}>Postal code:<input autoComplete="postal-code" className="field mt-1.5" inputMode="numeric" maxLength={4} onChange={(event) => update("postalCode", event.target.value)} pattern="[0-9]{4}" required value={form.postalCode} /></label>
+              </div>
+            </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className={label}>Mobile number<input className="field mt-1.5" onChange={(event) => update("phone", event.target.value)} required value={form.phone} /></label>
               <label className={label}>Civil status<select className="field mt-1.5" onChange={(event) => update("civilStatus", event.target.value)} value={form.civilStatus}>{["Single", "Married", "Widowed", "Separated"].map((value) => <option key={value}>{value}</option>)}</select></label>

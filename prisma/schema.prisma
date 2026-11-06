@@ -62,6 +62,16 @@ model ResidentProfile {
   phoneEncrypted     String
   civilStatusEncrypted String
   genderEncrypted    String?
+  firstNameEncrypted String?
+  middleNameEncrypted String?
+  lastNameEncrypted String?
+  houseNumberEncrypted String?
+  streetEncrypted String?
+  purokSitioEncrypted String?
+  barangayEncrypted String?
+  cityMunicipalityEncrypted String?
+  provinceEncrypted String?
+  postalCodeEncrypted String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
