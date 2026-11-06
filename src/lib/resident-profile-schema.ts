@@ -4,6 +4,7 @@ export const residentIdentityAddressSchema = z.object({
   firstName: z.string().trim().min(1).max(80),
   middleName: z.string().trim().max(80),
   lastName: z.string().trim().min(1).max(80),
+  suffix: z.string().trim().max(20),
   houseNumber: z.string().trim().min(1).max(80),
   street: z.string().trim().min(2).max(120),
   purokSitio: z.string().trim().min(2).max(100),
@@ -20,8 +21,9 @@ export const residentProfileSchema = residentIdentityAddressSchema.extend({
   gender: z.enum(["Male", "Female"]),
 });
 
-export function formatResidentName(value: Pick<z.infer<typeof residentIdentityAddressSchema>, "firstName" | "middleName" | "lastName">) {
-  return [value.firstName, value.middleName, value.lastName].filter(Boolean).join(" ");
+export function formatResidentName(value: Pick<z.infer<typeof residentIdentityAddressSchema>, "firstName" | "middleName" | "lastName" | "suffix">) {
+  const name = [value.firstName, value.middleName, value.lastName].filter(Boolean).join(" ");
+  return value.suffix ? `${name}, ${value.suffix}` : name;
 }
 
 export function formatResidentAddress(value: z.infer<typeof residentIdentityAddressSchema>) {

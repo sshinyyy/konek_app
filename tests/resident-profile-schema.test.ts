@@ -5,6 +5,7 @@ const validProfile = {
   firstName: "Jordan",
   middleName: "Q",
   lastName: "Resident",
+  suffix: "",
   dateOfBirth: "1990-04-12",
   houseNumber: "12",
   street: "Barangay Road",
@@ -37,5 +38,10 @@ describe("resident profile schema", () => {
     expect(formatResidentAddress(validProfile)).toBe(
       "12, Barangay Road, Purok 1, Barangay Banonong, Dapitan City, Zamboanga del Norte 7101",
     );
+  });
+
+  it("includes an optional suffix in the formatted resident name", () => {
+    expect(formatResidentName({ ...validProfile, suffix: "Jr." })).toBe("Jordan Q Resident, Jr.");
+    expect(residentProfileSchema.safeParse({ ...validProfile, suffix: "123456789012345678901", gender: "Male" }).success).toBe(false);
   });
 });

@@ -65,6 +65,7 @@ model ResidentProfile {
   firstNameEncrypted String?
   middleNameEncrypted String?
   lastNameEncrypted String?
+  suffixEncrypted String?
   houseNumberEncrypted String?
   streetEncrypted String?
   purokSitioEncrypted String?

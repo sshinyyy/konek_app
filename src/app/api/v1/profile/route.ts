@@ -24,6 +24,7 @@ export async function GET() {
       lastName: profile.lastNameEncrypted
         ? decrypt(profile.lastNameEncrypted)
         : nameParts.length > 1 ? nameParts[nameParts.length - 1] : "",
+      suffix: profile.suffixEncrypted ? decrypt(profile.suffixEncrypted) : "",
       dateOfBirth: decrypt(profile.dateOfBirthEncrypted),
       address: decrypt(profile.addressEncrypted),
       houseNumber: hasStructuredAddress ? decrypt(profile.houseNumberEncrypted ?? "") : "",
@@ -64,6 +65,7 @@ export async function PATCH(request: Request) {
           firstNameEncrypted: encrypt(value.firstName),
           middleNameEncrypted: encrypt(value.middleName),
           lastNameEncrypted: encrypt(value.lastName),
+          suffixEncrypted: encrypt(value.suffix),
           houseNumberEncrypted: encrypt(value.houseNumber),
           streetEncrypted: encrypt(value.street),
           purokSitioEncrypted: encrypt(value.purokSitio),

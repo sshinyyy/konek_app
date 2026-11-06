@@ -7,7 +7,7 @@ import { readJsonResponse } from "@/lib/client-response";
 
 const label = "mb-1.5 block text-[12px] font-semibold text-[#4d5b53]";
 const blank = {
-  firstName: "", middleName: "", lastName: "", dateOfBirth: "",
+  firstName: "", middleName: "", lastName: "", suffix: "", dateOfBirth: "",
   houseNumber: "", street: "", purokSitio: "", barangay: "",
   cityMunicipality: "", province: "", postalCode: "",
   phone: "", civilStatus: "Single", gender: "",
@@ -32,6 +32,7 @@ export function ProfileForm({ email }: { email: string }) {
           firstName: profile.firstName ?? "",
           middleName: profile.middleName ?? "",
           lastName: profile.lastName ?? "",
+          suffix: profile.suffix ?? "",
           dateOfBirth: profile.dateOfBirth ?? "",
           houseNumber: profile.houseNumber ?? "",
           street: profile.street ?? "",
@@ -86,6 +87,7 @@ export function ProfileForm({ email }: { email: string }) {
               <label className={label}>Last Name:<input autoComplete="family-name" className="field mt-1.5" onChange={(event) => update("lastName", event.target.value)} required value={form.lastName} /></label>
             </div>
             <label className={label}>Middle Name: <span className="font-normal text-[#8b968f]">(optional)</span><input autoComplete="additional-name" className="field mt-1.5" onChange={(event) => update("middleName", event.target.value)} value={form.middleName} /></label>
+            <label className={label}>Suffix <span className="font-normal text-[#8b968f]">(optional; choose or type your own)</span><input autoComplete="honorific-suffix" className="field mt-1.5" list="profile-suffix-options" maxLength={20} onChange={(event) => update("suffix", event.target.value)} value={form.suffix} /><datalist id="profile-suffix-options">{["Jr.", "Sr.", "II", "III", "IV", "V"].map((suffix) => <option key={suffix} value={suffix} />)}</datalist></label>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className={label}>Email address<input className="field mt-1.5 bg-[#f7f9f6] text-[#818c84]" disabled value={email} /></label>
               <label className={label}>Date of birth<input className="field mt-1.5" onChange={(event) => update("dateOfBirth", event.target.value)} required type="date" value={form.dateOfBirth} /></label>

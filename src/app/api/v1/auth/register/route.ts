@@ -55,6 +55,7 @@ export async function POST(request: Request) {
           firstNameEncrypted: encrypt(input.firstName),
           middleNameEncrypted: encrypt(input.middleName),
           lastNameEncrypted: encrypt(input.lastName),
+          suffixEncrypted: encrypt(input.suffix),
           houseNumberEncrypted: encrypt(input.houseNumber),
           streetEncrypted: encrypt(input.street),
           purokSitioEncrypted: encrypt(input.purokSitio),
