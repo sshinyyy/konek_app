@@ -27,17 +27,15 @@ export async function GET(request: Request) {
         skip: page * REQUEST_PAGE_SIZE,
         take: REQUEST_PAGE_SIZE + 1,
       };
-      const [statusCounts, totalCount] = await Promise.all([
-        tx.documentRequest.groupBy({
-          by: ["status"],
-          where,
-          _count: { _all: true },
-        }),
-        tx.documentRequest.count({ where }),
-      ]);
+      const statusCounts = await tx.documentRequest.groupBy({
+        by: ["status"],
+        where,
+        _count: { _all: true },
+      });
       const counts = Object.fromEntries(
         statusCounts.map(({ status, _count }) => [status, _count._all]),
       );
+      const totalCount = statusCounts.reduce((total, { _count }) => total + _count._all, 0);
       if (isStaff(session)) {
         const staffRequests = await tx.documentRequest.findMany({
           include: {
