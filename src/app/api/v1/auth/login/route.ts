@@ -28,12 +28,14 @@ export async function POST(request: Request) {
       throw new ApiError(401, "Email or password is incorrect.");
     }
     const session = { userId: user.id, email: user.email, role: user.role };
-    await withRlsContext(session, (tx) =>
-      tx.auditLog.create({
-        data: { actorId: user.id, action: "USER_LOGIN", entity: "User", entityId: user.id },
-      }),
-    );
-    const token = await createSessionToken(session);
+    const [token] = await Promise.all([
+      createSessionToken(session),
+      withRlsContext(session, (tx) =>
+        tx.auditLog.create({
+          data: { actorId: user.id, action: "USER_LOGIN", entity: "User", entityId: user.id },
+        }),
+      ),
+    ]);
     const response = NextResponse.json({ id: user.id, email: user.email, role: user.role });
     response.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,
