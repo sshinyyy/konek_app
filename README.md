@@ -50,7 +50,9 @@ New installations default to Barangay Banonong, Dapitan City, Zamboanga del Nort
 - Sessions are short-lived signed HTTP-only, `SameSite=Strict` cookies. Roles are assigned server-side; public registration can only create resident accounts. Staff and administrators are provisioned by administrators or the one-time seed.
 - Every protected server request rechecks that the account is active and that its stored role still matches the session, so disabling an account or changing its role invalidates the old session on its next server request. The Next.js Proxy performs only an optimistic token check; authorization is enforced again by server pages and API handlers.
 - Mutating routes validate payloads, check same-origin requests, and enforce ownership/role checks. Private S3 objects use short-lived presigned URLs; uploads are size/type constrained and marked complete only after checking the stored object.
-- Supporting uploads are written first to the private `quarantine/` prefix and checked against actual file signatures and size/type metadata before they are copied to `requirements/`. Malware scanning is not implemented: uploads are unscanned, are marked `COMPLETE` rather than `CLEAN`, and the staff interface warns reviewers before opening them. File signature checks are not a substitute for malware detection; staff should open files only when they trust the resident and file. Staff download routes deny pending or rejected files. Configure a private-bucket lifecycle rule to remove abandoned objects in `quarantine/`.
+- Supporting uploads are written first to the private `quarantine/` prefix and checked against actual file signatures and size/type metadata. They are streamed to a private ClamAV daemon using `INSTREAM`; only clean files are copied to `requirements/` and marked `CLEAN`. Infected files are rejected and deleted. Scanning fails closed: if the scanner is unavailable or unconfigured, upload completion and access to legacy unscanned files return an error rather than exposing the file. Configure `CLAMAV_HOST`, `CLAMAV_PORT`, and `CLAMAV_TIMEOUT_MS`; do not expose the daemon to the public internet. Configure a private-bucket lifecycle rule to remove abandoned objects in `quarantine/`.
+- Set `PERFORMANCE_LOGS=true` to emit low-cardinality JSON timing events for sign-in and request-list API calls. Events contain only operation names and durations, not account identifiers, credentials, or resident data. Keep logs access-controlled and apply the barangay's approved retention policy.
+- Resident and staff dashboards render their first page of requests from authenticated, RLS-protected server queries; subsequent pages continue to use the paginated API. Do not cache these per-user responses across sessions.
 - Login, registration, public QR verification, and upload URL creation use atomic fixed-window rate limits stored in Upstash Redis. Default limits are 10 login attempts/minute, 5 registrations/hour, 30 verifications/minute, and 10 upload URLs/hour. Each limit and window can be overridden with the matching `RATE_LIMIT_<NAME>_MAX` and `RATE_LIMIT_<NAME>_WINDOW_SECONDS` environment variables. Production requests fail closed with a 503 if Redis protection is unavailable or unconfigured.
 - Issued PDFs are rendered server-side, stored in the private storage bucket, and embed a QR link containing a random bearer verification token. Only the token hash is stored in PostgreSQL. The token is not described as encrypted or digitally signed. Invalid, expired, revoked, and successful verification scans are recorded with a salted IP hash and bounded user-agent.
 - The app adds HTTPS HSTS in production, no-referrer, frame and MIME protections, and disables caching for API responses. Configure private-bucket lifecycle/retention, backups, alerting, and provider agreements. These controls do not themselves establish legal compliance.
@@ -80,6 +82,9 @@ New installations default to Barangay Banonong, Dapitan City, Zamboanga del Nort
 - `npm run db:generate` regenerates the Prisma client after schema changes.
 - `npm run db:migrate` applies committed Prisma migrations to the configured direct database.
 - `npm run lint`, `npm run typecheck`, and `npm run build` validate the application.
+- `npm run test:staging` runs the PostgreSQL RLS integration test only when `RUN_STAGING_RLS_TESTS=true`. Use only after confirming `.env` points to a disposable non-production database.
+- `npm run test:e2e` runs Playwright in Chromium. It always exercises the public verification form and only creates/cleans synthetic resident, staff, and request records when `RUN_STAGING_E2E=true`; use only with the confirmed non-production database.
+- Install the browser once with `npx playwright install chromium`. Keep `CLAMAV_HOST` on a private network reachable by the app runtime; this integration speaks the ClamAV daemon `INSTREAM` TCP protocol and fails closed if the daemon cannot be reached.
 - Runtime API handlers use the Node.js runtime for Prisma, AES-GCM, PDF, and S3. Configure Vercel environment variables separately for Preview and Production; never use a production encryption key in Preview.
 - Prisma schema and migrations are the source of truth for entity fields, database types, declared lengths, defaults, and relationships. Update diagrams and data dictionaries from those definitions; do not infer lengths from generic `VARCHAR` or `TEXT` labels.
 
@@ -92,8 +97,8 @@ Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` locally
 Use a dedicated preview deployment with isolated database/storage resources, synthetic resident details, and a test staff account:
 
 1. Register a test resident, sign in, and confirm the resident profile loads and can be updated.
-2. Submit a request using synthetic information and a harmless test PDF/image. Confirm it remains private in quarantine until file signature and size/type checks succeed.
-3. Confirm the upload is marked as not malware-scanned and is available only to authorized staff after validation. Confirm invalid, mismatched, and oversized files are blocked.
+2. Submit a request using synthetic information and the approved EICAR test file only in an isolated non-production scanner environment. Confirm it remains private in quarantine until signature, size/type, and malware checks finish.
+3. Confirm a clean upload is marked `CLEAN` and available only to authorized staff. Confirm the EICAR test file is rejected/deleted, and scanner outages fail closed. Confirm invalid, mismatched, and oversized files are blocked.
 4. Sign in as test staff; review the request. Test rejection with remarks, then use a separate request to issue a document.
 5. Download the request receipt and issued PDF; confirm both use the saved Banonong settings and the issued document contains a QR verification link.
 6. Verify the QR token and check that only intended public details are returned. Repeat with an invalid token and confirm the invalid result is logged without disclosing resident profile data.
@@ -101,8 +106,21 @@ Use a dedicated preview deployment with isolated database/storage resources, syn
 8. Exercise each configured rate limit using test requests and confirm excess attempts return HTTP 429 with `Retry-After`. Do not run high-volume load tests against shared services.
 9. Delete synthetic test accounts/records and uploaded objects using the approved preview cleanup procedure.
 
+The automated browser flow creates unique `example.test` resident/staff accounts and one synthetic request, then removes the request, its audit rows, the test accounts, and their profiles in a `finally` cleanup. Run it only against the explicitly confirmed disposable staging environment; it does not upload files or issue certificates.
+
 ### Authorized production readiness checks
 
-Before production use, a designated administrator must verify the Vercel Production environment variables, database role/RLS behavior, encryption-key backup and restore plan, Upstash limits, private-bucket lifecycle and access policies, and Banonong certificate settings. Supporting files are not malware-scanned; administrators must decide whether this residual risk is acceptable before enabling real resident document processing. An authorized operator should perform a limited smoke test only with approved synthetic/test accounts and a documented cleanup plan. Do not issue a real certificate or use actual resident information as a deployment test.
+Before production use, a designated administrator must verify the Vercel Production environment variables, database role/RLS behavior, encryption-key backup and restore plan, ClamAV availability/signature updates, Upstash limits, private-bucket lifecycle and access policies, and Banonong certificate settings. An authorized operator should perform a limited smoke test only with approved synthetic/test accounts and a documented cleanup plan. Do not issue a real certificate or use actual resident information as a deployment test.
+
+### Isolated backup-restore validation
+
+Run restore drills only in a separate disposable project/database and private storage location. Never point a restore command or provider restore workflow at Production.
+
+1. Select a recent provider-managed backup and record its timestamp and integrity metadata without downloading resident content to an unmanaged device.
+2. Create an isolated restore target with production network access disabled and synthetic-only access credentials.
+3. Restore using the database/storage provider's documented workflow; do not overwrite or rename the production database.
+4. Verify schema/migration state, RLS behavior using non-production test accounts, application health, and a synthetic file round-trip. Do not inspect actual resident records.
+5. Record duration and pass/fail results without storing secrets or resident data, then delete the isolated restore and temporary credentials.
+6. Escalate failed or incomplete restores to the designated database/storage administrator before relying on backups for recovery.
 
 The Barangay Data Protection Officer must finalize the privacy notice and determine applicable lawful bases, retention/deletion schedule, provider agreements, data-subject request procedures, backup/recovery, access-review, and breach-response processes before real resident data is processed. This software does not certify compliance with RA 10173.

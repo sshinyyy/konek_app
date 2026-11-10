@@ -100,7 +100,6 @@ export function AppShell({ role, email, fullName, children }: Props) {
       const response = await fetch("/api/v1/auth/logout", { method: "POST" });
       if (!response.ok) throw new Error("Could not sign out. Please try again.");
       router.push("/login");
-      router.refresh();
     } catch (error) {
       setSignOutError(error instanceof Error ? error.message : "Could not sign out. Please try again.");
     } finally {

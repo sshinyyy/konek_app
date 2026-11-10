@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowDownToLine, ArrowRight, ArrowUpRight, CalendarDays, Check, Clock3, FileCheck2, FilePlus2, Files, LoaderCircle, RefreshCw, ShieldCheck, UploadCloud, X } from "lucide-react";
 import { getResidentRequestNextStep, requestStatusLabels } from "@/lib/request-presentation";
 import { readJsonResponse } from "@/lib/client-response";
+import type { RequestPageData } from "@/lib/request-query";
 import { getSupportingFileIssue, getSupportingFileMimeType } from "@/lib/supporting-file-validation";
 
 type ResidentRequest = {
@@ -49,26 +50,28 @@ export function ResidentDashboard({
   fullName,
   today,
   section = "overview",
+  initialPage,
 }: {
   fullName: string;
   today: string;
   section?: "overview" | "requests";
+  initialPage?: RequestPageData;
 }) {
-  const [requests, setRequests] = useState<ResidentRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState<ResidentRequest[]>(initialPage?.requests ?? []);
+  const [loading, setLoading] = useState(!initialPage);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(section === "requests");
   const [submitting, setSubmitting] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [nextPage, setNextPage] = useState<number | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [nextPage, setNextPage] = useState<number | null>(initialPage?.nextPage ?? null);
+  const [totalCount, setTotalCount] = useState(initialPage?.totalCount ?? 0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>(initialPage?.counts ?? {});
   const [type, setType] = useState("BARANGAY_CLEARANCE");
   const [purpose, setPurpose] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [notice, setNotice] = useState("");
   const requestLoad = useRef<Promise<void> | null>(null);
-  const nextPageRef = useRef<number | null | undefined>(undefined);
+  const loadedPageCount = useRef(initialPage ? 1 : 0);
 
   const loadRequests = useCallback(() => {
     if (requestLoad.current) return requestLoad.current;
@@ -84,8 +87,8 @@ export function ResidentDashboard({
         });
         setTotalCount(body.totalCount ?? 0);
         setStatusCounts(body.counts ?? {});
-        if (nextPageRef.current === undefined) {
-          nextPageRef.current = body.nextPage;
+        loadedPageCount.current = Math.max(loadedPageCount.current, 1);
+        if (loadedPageCount.current <= 1) {
           setNextPage(body.nextPage);
         }
       } catch (reason) {
@@ -113,7 +116,7 @@ export function ResidentDashboard({
         const existingIds = new Set(current.map((request) => request.id));
         return [...current, ...body.requests.filter((request) => !existingIds.has(request.id))];
       });
-      nextPageRef.current = body.nextPage;
+      loadedPageCount.current += 1;
       setNextPage(body.nextPage);
       if (body.totalCount !== undefined) setTotalCount(body.totalCount);
       if (body.counts) setStatusCounts(body.counts);
@@ -125,12 +128,12 @@ export function ResidentDashboard({
   }
 
   useEffect(() => {
-    void loadRequests();
+    if (!initialPage) void loadRequests();
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") void loadRequests();
     }, 30_000);
     return () => window.clearInterval(interval);
-  }, [loadRequests]);
+  }, [initialPage, loadRequests]);
 
   async function submitRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -185,7 +188,8 @@ export function ResidentDashboard({
       setError(reason instanceof Error ? reason.message : "The request could not be submitted.");
       if (createdReferenceNo) {
         setError("");
-        setNotice(`Request ${createdReferenceNo} was created, but a supporting file could not be uploaded. Contact the barangay office before submitting another request.`);
+        const reasonMessage = reason instanceof Error ? reason.message : "The file could not be securely processed.";
+        setNotice(`Request ${createdReferenceNo} was created, but a supporting file could not be uploaded: ${reasonMessage}`);
         setPurpose("");
         setFiles([]);
         setShowForm(false);
@@ -278,7 +282,7 @@ export function ResidentDashboard({
                   });
                 }} type="file" />
               </span>
-              <span className="mt-2 block rounded-md border border-[#f0dfbd] bg-[#fff9ec] px-3 py-2 text-[10px] font-normal leading-4 text-[#896838]">Uploaded files are checked for type and size but are not malware-scanned. Only upload files you trust.</span>
+              <span className="mt-2 block rounded-md border border-[#dce8dc] bg-[#f6faf5] px-3 py-2 text-[10px] font-normal leading-4 text-[#587362]">Files are checked for type, size, and malware before staff can access them. Upload completion may take a few seconds while the security scan runs.</span>
             </label>
             {files.length > 0 && <ul aria-label="Selected supporting documents" className="space-y-1.5">
               {files.map((file, index) => <li className="flex items-center gap-2 rounded-md border border-[#edf0ed] bg-white px-3 py-2 text-[11px] text-[#58675d]" key={`${file.name}:${file.size}:${file.lastModified}`}>

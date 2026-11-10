@@ -58,7 +58,6 @@ function AuthFormContent({ mode }: { mode: "login" | "register" }) {
         : result.role === "STAFF" ? "/staff"
           : nextPath;
       router.replace(destination);
-      router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "A connection error occurred. Please try again.");
     } finally {

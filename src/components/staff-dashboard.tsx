@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowDownToLine, ArrowRight, Check, Clock3, FileCheck2, Files, LoaderCircle, RefreshCw, Search, ShieldCheck, UserRound, X } from "lucide-react";
 import { requestStatusLabels } from "@/lib/request-presentation";
 import { readJsonResponse } from "@/lib/client-response";
+import type { RequestPageData } from "@/lib/request-query";
 
 type Row = {
   id: string;
@@ -43,22 +44,24 @@ export function StaffDashboard({
   staffName,
   initialProfile,
   section = "dashboard",
+  initialPage,
 }: {
   staffName: string;
   initialProfile: StaffProfile;
   section?: "dashboard" | "profile";
+  initialPage?: RequestPageData;
 }) {
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<Row[]>(initialPage?.requests ?? []);
   const [profile, setProfile] = useState(initialProfile);
   const [selected, setSelected] = useState<Row | null>(null);
   const [remarks, setRemarks] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialPage);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [nextPage, setNextPage] = useState<number | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
+  const [nextPage, setNextPage] = useState<number | null>(initialPage?.nextPage ?? null);
+  const [totalCount, setTotalCount] = useState(initialPage?.totalCount ?? 0);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>(initialPage?.counts ?? {});
   const [busy, setBusy] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [error, setError] = useState("");
@@ -84,6 +87,7 @@ export function StaffDashboard({
   }, []);
 
   useEffect(() => {
+    if (initialPage) return;
     if (section === "profile") return;
     void fetch("/api/v1/requests?page=0", { cache: "no-store" })
       .then(async (response) => {
@@ -99,7 +103,7 @@ export function StaffDashboard({
       })
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Requests could not be loaded."))
       .finally(() => setLoading(false));
-  }, [section]);
+  }, [initialPage, section]);
 
   async function loadMore() {
     if (nextPage === null || loadingMore) return;
@@ -259,8 +263,8 @@ export function StaffDashboard({
               <div>
                 <p className="mb-2 text-[10px] font-semibold text-[#68756d]">Supporting requirements</p>
                 {selected.uploads.length === 0 ? <p className="text-[10px] text-[#9aa49d]">No files attached.</p> : <>
-                  <p className="mb-2 rounded-md border border-[#f0dfbd] bg-[#fff9ec] px-2.5 py-2 text-[9px] leading-4 text-[#896838]">Files are not malware-scanned. Open only if you trust the resident and file.</p>
-                  <div className="space-y-1.5">{selected.uploads.map((file) => <a className="flex items-center justify-between rounded-md border border-[#edf0ed] px-2.5 py-2 text-[10px] text-[#58675d] hover:bg-[#f8faf7]" href={`/api/v1/uploads/${file.id}/download`} key={file.id}><span className="min-w-0 truncate">{file.fileName}{file.status === "COMPLETE" && <span className="ml-2 rounded bg-[#fff1d9] px-1 py-0.5 text-[8px] font-semibold text-[#896838]">NOT SCANNED</span>}</span><ArrowDownToLine className="ml-2 shrink-0 text-[#789181]" size={13} /></a>)}</div>
+                  <p className="mb-2 rounded-md border border-[#dce8dc] bg-[#f6faf5] px-2.5 py-2 text-[9px] leading-4 text-[#587362]">Files must pass the configured malware scan before they can be opened.</p>
+                  <div className="space-y-1.5">{selected.uploads.map((file) => <a aria-disabled={file.status !== "CLEAN"} className={`flex items-center justify-between rounded-md border border-[#edf0ed] px-2.5 py-2 text-[10px] text-[#58675d] ${file.status === "CLEAN" ? "hover:bg-[#f8faf7]" : "pointer-events-none opacity-60"}`} href={file.status === "CLEAN" ? `/api/v1/uploads/${file.id}/download` : undefined} key={file.id}><span className="min-w-0 truncate">{file.fileName}<span className={`ml-2 rounded px-1 py-0.5 text-[8px] font-semibold ${file.status === "CLEAN" ? "bg-[#e8f3ec] text-[#38704e]" : "bg-[#fff1d9] text-[#896838]"}`}>{file.status === "CLEAN" ? "SCANNED" : "NOT AVAILABLE"}</span></span><ArrowDownToLine className="ml-2 shrink-0 text-[#789181]" size={13} /></a>)}</div>
                 </>}
               </div>
               {selected.remarks && <div className="rounded-lg bg-[#fff8ed] p-3 text-[10px] text-[#896838]">Staff remarks: {selected.remarks}</div>}

@@ -1,6 +1,7 @@
 import { ApiError, assertSameOrigin, errorResponse } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { fileExtensionForMime, validateStoredUpload } from "@/lib/file-safety";
+import { scanForMalware } from "@/lib/malware-scan";
 import { withRlsContext } from "@/lib/rls";
 import { deleteObject, uploadObject } from "@/lib/storage";
 
@@ -41,7 +42,7 @@ export async function POST(
       }
       return found;
     });
-    if (file.status === "CLEAN" || file.status === "COMPLETE") return Response.json({ ok: true });
+    if (file.status === "CLEAN") return Response.json({ ok: true });
     if (file.status === "REJECTED") throw new ApiError(409, "This uploaded file was rejected.");
 
     let bytes: Uint8Array;
@@ -54,13 +55,26 @@ export async function POST(
       throw error;
     }
 
+    const scanResult = await scanForMalware(bytes);
+    if (scanResult === "INFECTED") {
+      await rejectUpload(file.id, file.objectKey, session);
+      throw new ApiError(422, "The uploaded file did not pass the security scan.");
+    }
+
+    if (file.status === "COMPLETE") {
+      await withRlsContext(session, (tx) =>
+        tx.supportingDocument.update({ where: { id: file.id }, data: { status: "CLEAN" } }),
+      );
+      return Response.json({ ok: true });
+    }
+
     const extension = fileExtensionForMime(file.mimeType);
     const storedObjectKey = `requirements/${session.userId}/${file.id}.${extension}`;
     await uploadObject(storedObjectKey, bytes, file.mimeType);
     await withRlsContext(session, (tx) =>
       tx.supportingDocument.update({
         where: { id: file.id },
-        data: { objectKey: storedObjectKey, status: "COMPLETE" },
+        data: { objectKey: storedObjectKey, status: "CLEAN" },
       }),
     );
 

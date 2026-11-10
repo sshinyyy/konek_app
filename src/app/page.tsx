@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ResidentDashboard } from "@/components/resident-dashboard";
 import { getSession } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
+import { getRequestPage } from "@/lib/request-query";
 import { withRlsContext } from "@/lib/rls";
 
 export default async function HomePage() {
@@ -11,9 +12,15 @@ export default async function HomePage() {
   if (!session) redirect("/login");
   if (session.role === UserRole.ADMIN) redirect("/admin");
   if (session.role === UserRole.STAFF) redirect("/staff");
-  const profile = await withRlsContext(session, (tx) =>
-    tx.residentProfile.findUnique({ where: { userId: session.userId }, select: { fullNameEncrypted: true } }),
-  );
+  const [profile, initialPage] = await Promise.all([
+    withRlsContext(session, (tx) =>
+      tx.residentProfile.findUnique({
+        where: { userId: session.userId },
+        select: { fullNameEncrypted: true },
+      }),
+    ),
+    getRequestPage(session, 0),
+  ]);
   const name = profile ? decrypt(profile.fullNameEncrypted) : "Resident";
   const today = new Date().toLocaleDateString("en-PH", {
     weekday: "long",
@@ -21,5 +28,5 @@ export default async function HomePage() {
     day: "numeric",
     year: "numeric",
   }).toUpperCase();
-  return <AppShell role={session.role} email={session.email} fullName={name}><ResidentDashboard key="overview" fullName={name} today={today} /></AppShell>;
+  return <AppShell role={session.role} email={session.email} fullName={name}><ResidentDashboard key="overview" fullName={name} today={today} initialPage={initialPage} /></AppShell>;
 }

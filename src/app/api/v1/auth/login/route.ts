@@ -4,12 +4,14 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { assertSameOrigin, ApiError, errorResponse, readJson } from "@/lib/api";
 import { createSessionToken, SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/auth";
+import { logPerformance } from "@/lib/performance";
 import { withRlsContext } from "@/lib/rls";
 import { rateLimitResponse } from "@/lib/rate-limit";
 
 const schema = z.object({ email: z.email().max(320), password: z.string().min(1).max(128) });
 
 export async function POST(request: Request) {
+  const startedAt = performance.now();
   try {
     assertSameOrigin(request);
     const limited = await rateLimitResponse(request, "login");
@@ -47,5 +49,7 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     return errorResponse(error);
+  } finally {
+    logPerformance("auth.login", startedAt);
   }
 }

@@ -1,6 +1,7 @@
 import { ApiError, errorResponse } from "@/lib/api";
 import { getSession, isStaff } from "@/lib/auth";
 import { validateStoredUpload } from "@/lib/file-safety";
+import { scanForMalware } from "@/lib/malware-scan";
 import { withRlsContext } from "@/lib/rls";
 import { createDownloadUrl, deleteObject } from "@/lib/storage";
 import { canAccessSupportingDocument } from "@/lib/upload-access";
@@ -34,7 +35,28 @@ export async function GET(
     });
 
     try {
-      await validateStoredUpload(file.objectKey, file.mimeType, file.sizeBytes);
+      const bytes = await validateStoredUpload(file.objectKey, file.mimeType, file.sizeBytes);
+      if (file.status === "COMPLETE") {
+        const scanResult = await scanForMalware(bytes);
+        if (scanResult === "INFECTED") {
+          await withRlsContext(session, (tx) =>
+            tx.supportingDocument.update({ where: { id }, data: { status: "REJECTED" } }),
+          );
+          try {
+            await deleteObject(file.objectKey);
+          } catch (cleanupError) {
+            console.error("Could not remove a malware-positive supporting upload", {
+              uploadId: id,
+              cleanupError,
+            });
+            throw new ApiError(503, "The unsafe file was blocked, but storage cleanup is pending.");
+          }
+          throw new ApiError(404, "File not found.");
+        }
+        await withRlsContext(session, (tx) =>
+          tx.supportingDocument.update({ where: { id }, data: { status: "CLEAN" } }),
+        );
+      }
     } catch (error) {
       if (error instanceof ApiError && error.status === 422) {
         await withRlsContext(session, (tx) =>
