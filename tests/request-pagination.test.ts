@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseRequestPage, REQUEST_PAGE_SIZE } from "@/lib/request-pagination";
+import { parseIncludeRequestSummary, parseRequestPage, REQUEST_PAGE_SIZE } from "@/lib/request-pagination";
 
 describe("request pagination", () => {
   it("uses page zero by default and fixes a bounded page size", () => {
@@ -12,5 +12,11 @@ describe("request pagination", () => {
     for (const page of ["-1", "1.5", "NaN", "100001"]) {
       expect(() => parseRequestPage(page)).toThrow("Invalid request page.");
     }
+  });
+
+  it("includes the request summary by default and supports skipping it", () => {
+    expect(parseIncludeRequestSummary(null)).toBe(true);
+    expect(parseIncludeRequestSummary("true")).toBe(true);
+    expect(parseIncludeRequestSummary("false")).toBe(false);
   });
 });

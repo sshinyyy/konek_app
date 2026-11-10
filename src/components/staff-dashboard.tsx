@@ -33,8 +33,8 @@ const badge: Record<Row["status"], string> = {
 type StaffProfile = { fullName: string; jobTitle: string; phone: string };
 type RequestPage = {
   requests: Row[];
-  counts: Record<string, number>;
-  totalCount: number;
+  counts?: Record<string, number>;
+  totalCount?: number;
   nextPage: number | null;
   error?: string;
 };
@@ -75,8 +75,8 @@ export function StaffDashboard({
       const body = await readJsonResponse<RequestPage>(response, "Requests could not be loaded.");
       setRows(body.requests);
       setNextPage(body.nextPage);
-      setTotalCount(body.totalCount);
-      setStatusCounts(body.counts);
+      setTotalCount(body.totalCount ?? 0);
+      setStatusCounts(body.counts ?? {});
       setSelected((previous) => previous ? body.requests.find((row: Row) => row.id === previous.id) ?? null : null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Requests could not be loaded.");
@@ -89,13 +89,13 @@ export function StaffDashboard({
       .then(async (response) => {
         const body = await readJsonResponse<RequestPage>(response, "Requests could not be loaded.");
         if (!response.ok) throw new Error(body.error ?? "Requests could not be loaded.");
-        return body as RequestPage;
+        return body;
       })
       .then((body) => {
         setRows(body.requests);
         setNextPage(body.nextPage);
-        setTotalCount(body.totalCount);
-        setStatusCounts(body.counts);
+        setTotalCount(body.totalCount ?? 0);
+        setStatusCounts(body.counts ?? {});
       })
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Requests could not be loaded."))
       .finally(() => setLoading(false));
@@ -106,7 +106,7 @@ export function StaffDashboard({
     setLoadingMore(true);
     setError("");
     try {
-      const response = await fetch(`/api/v1/requests?page=${nextPage}`, { cache: "no-store" });
+      const response = await fetch(`/api/v1/requests?page=${nextPage}&includeSummary=false`, { cache: "no-store" });
       if (!response.ok) {
         const body = await readJsonResponse<{ error?: string }>(response, "More requests could not be loaded.");
         throw new Error(body.error ?? "More requests could not be loaded.");
@@ -117,8 +117,8 @@ export function StaffDashboard({
         return [...current, ...body.requests.filter((row) => !existingIds.has(row.id))];
       });
       setNextPage(body.nextPage);
-      setTotalCount(body.totalCount);
-      setStatusCounts(body.counts);
+      if (body.totalCount !== undefined) setTotalCount(body.totalCount);
+      if (body.counts) setStatusCounts(body.counts);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "More requests could not be loaded.");
     } finally {

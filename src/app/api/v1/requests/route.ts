@@ -5,7 +5,7 @@ import { ApiError, assertSameOrigin, errorResponse, readJson } from "@/lib/api";
 import { getSession, isStaff } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
 import { withRlsContext } from "@/lib/rls";
-import { parseRequestPage, REQUEST_PAGE_SIZE } from "@/lib/request-pagination";
+import { parseIncludeRequestSummary, parseRequestPage, REQUEST_PAGE_SIZE } from "@/lib/request-pagination";
 
 const schema = z.object({
   type: z.enum(["BARANGAY_CLEARANCE", "CERTIFICATE_OF_RESIDENCY", "BARANGAY_ID"]),
@@ -15,7 +15,9 @@ export async function GET(request: Request) {
   try {
     const session = await getSession();
     if (!session) throw new ApiError(401, "Authentication required.");
-    const page = parseRequestPage(new URL(request.url).searchParams.get("page"));
+    const searchParams = new URL(request.url).searchParams;
+    const page = parseRequestPage(searchParams.get("page"));
+    const includeSummary = parseIncludeRequestSummary(searchParams.get("includeSummary"));
     const where = isStaff(session) ? undefined : { residentId: session.userId };
     const requests = await withRlsContext(session, async (tx) => {
       const include = {
@@ -27,15 +29,21 @@ export async function GET(request: Request) {
         skip: page * REQUEST_PAGE_SIZE,
         take: REQUEST_PAGE_SIZE + 1,
       };
-      const statusCounts = await tx.documentRequest.groupBy({
-        by: ["status"],
-        where,
-        _count: { _all: true },
-      });
-      const counts = Object.fromEntries(
-        statusCounts.map(({ status, _count }) => [status, _count._all]),
-      );
-      const totalCount = statusCounts.reduce((total, { _count }) => total + _count._all, 0);
+      const statusCounts = includeSummary
+        ? await tx.documentRequest.groupBy({
+            by: ["status"],
+            where,
+            _count: { _all: true },
+          })
+        : null;
+      const summaryFields = statusCounts
+        ? {
+            counts: Object.fromEntries(
+              statusCounts.map(({ status, _count }) => [status, _count._all]),
+            ),
+            totalCount: statusCounts.reduce((total, { _count }) => total + _count._all, 0),
+          }
+        : {};
       if (isStaff(session)) {
         const staffRequests = await tx.documentRequest.findMany({
           include: {
@@ -84,8 +92,7 @@ export async function GET(request: Request) {
                 }
               : {}),
           })),
-          counts,
-          totalCount,
+          ...summaryFields,
           nextPage: hasMore ? page + 1 : null,
         };
       }
@@ -108,8 +115,7 @@ export async function GET(request: Request) {
           uploads: request.uploads,
           document: request.document,
         })),
-        counts,
-        totalCount,
+        ...summaryFields,
         nextPage: hasMore ? page + 1 : null,
       };
     });

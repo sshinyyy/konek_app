@@ -69,7 +69,7 @@ New installations default to Barangay Banonong, Dapitan City, Zamboanga del Nort
 | `POST /api/v1/auth/register` | Public | Resident registration |
 | `POST /api/v1/auth/login`, `/logout` | Public / session | Session creation and termination |
 | `GET/PATCH /api/v1/profile` | Resident | Read/update own profile |
-| `GET/POST /api/v1/requests` | Session | List own requests or staff queue; submit a resident request |
+| `GET/POST /api/v1/requests` | Session | Paginated request list or resident submission; later pages may set `includeSummary=false` to skip recomputing counts |
 | `PATCH /api/v1/requests/:id/decision` | Staff / admin | Start review, reject with remarks, or issue an authenticated document |
 | `POST /api/v1/uploads` | Resident | Create a short-lived signed supporting-file upload |
 | `GET /api/v1/verify?token=…` | Public | Audit and check an opaque verification token |

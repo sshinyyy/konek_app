@@ -20,8 +20,8 @@ type ResidentRequest = {
 };
 type RequestPage = {
   requests: ResidentRequest[];
-  counts: Record<string, number>;
-  totalCount: number;
+  counts?: Record<string, number>;
+  totalCount?: number;
   nextPage: number | null;
   error?: string;
 };
@@ -82,8 +82,8 @@ export function ResidentDashboard({
           const firstPageIds = new Set(body.requests.map((request) => request.id));
           return [...body.requests, ...current.filter((request) => !firstPageIds.has(request.id))];
         });
-        setTotalCount(body.totalCount);
-        setStatusCounts(body.counts);
+        setTotalCount(body.totalCount ?? 0);
+        setStatusCounts(body.counts ?? {});
         if (nextPageRef.current === undefined) {
           nextPageRef.current = body.nextPage;
           setNextPage(body.nextPage);
@@ -106,7 +106,7 @@ export function ResidentDashboard({
     setLoadingMore(true);
     setError("");
     try {
-      const response = await fetch(`/api/v1/requests?page=${nextPage}`, { cache: "no-store" });
+      const response = await fetch(`/api/v1/requests?page=${nextPage}&includeSummary=false`, { cache: "no-store" });
       if (!response.ok) throw new Error(await getError(response));
       const body = await readJsonResponse<RequestPage>(response, "More requests could not be loaded.");
       setRequests((current) => {
@@ -115,8 +115,8 @@ export function ResidentDashboard({
       });
       nextPageRef.current = body.nextPage;
       setNextPage(body.nextPage);
-      setTotalCount(body.totalCount);
-      setStatusCounts(body.counts);
+      if (body.totalCount !== undefined) setTotalCount(body.totalCount);
+      if (body.counts) setStatusCounts(body.counts);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "More requests could not be loaded.");
     } finally {

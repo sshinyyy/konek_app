@@ -10,3 +10,7 @@ export function parseRequestPage(value: string | null): number {
   if (!parsed.success) throw new ApiError(400, "Invalid request page.");
   return parsed.data;
 }
+
+export function parseIncludeRequestSummary(value: string | null): boolean {
+  return value !== "false";
+}
